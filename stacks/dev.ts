@@ -1,7 +1,7 @@
 import { createQueue } from "../shared/sqs";
 
 const devQueue = createQueue({
-    name: "valornet-dev-queue",
+    name: "valornet-dev-email-queue",
     tags: {
         Environment: "dev",
         Project: "valornet"
