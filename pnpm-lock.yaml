@@ -17,6 +17,9 @@ importers:
       '@pulumi/pulumi':
         specifier: ^3.113.0
         version: 3.169.0(typescript@5.8.3)
+      '@pulumi/random':
+        specifier: ^4.18.2
+        version: 4.18.2(typescript@5.8.3)
     devDependencies:
       '@types/node':
         specifier: ^18
@@ -349,6 +352,9 @@ packages:
         optional: true
       typescript:
         optional: true
+
+  '@pulumi/random@4.18.2':
+    resolution: {integrity: sha512-jC0HfgkFKwgUGmocM7Tw6UyOrpLFXGO8kYfV6f5Q9R/yziaVxEVPQ0Uup2HfosDh926EZHJrt2EUIJHWCyOvFA==}
 
   '@sigstore/bundle@2.3.2':
     resolution: {integrity: sha512-wueKWDk70QixNLB363yHc2D2ItTgYiMTdPwK8D9dKQMR3ZQ0c35IxP5xnwQ8cNLoCgCRcHf14kE+CLIvNX1zmA==}
@@ -2108,11 +2114,21 @@ snapshots:
       semver: 7.7.1
       source-map-support: 0.5.21
       tmp: 0.2.3
-      typescript: 5.8.3
       upath: 1.2.0
+    optionalDependencies:
+      typescript: 5.8.3
     transitivePeerDependencies:
       - bluebird
       - supports-color
+
+  '@pulumi/random@4.18.2(typescript@5.8.3)':
+    dependencies:
+      '@pulumi/pulumi': 3.169.0(typescript@5.8.3)
+    transitivePeerDependencies:
+      - bluebird
+      - supports-color
+      - ts-node
+      - typescript
 
   '@sigstore/bundle@2.3.2':
     dependencies:
@@ -2624,7 +2640,7 @@ snapshots:
       strnum: 1.1.2
 
   fdir@6.4.4(picomatch@3.0.1):
-    dependencies:
+    optionalDependencies:
       picomatch: 3.0.1
 
   find-up@6.3.0:

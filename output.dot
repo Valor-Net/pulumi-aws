@@ -1,0 +1,10 @@
+strict digraph {
+    Resource0 [label="urn:pulumi:staging::valornet-infra::pulumi:providers:aws::default_6_66_3"];
+    Resource1 [label="urn:pulumi:staging::valornet-infra::pulumi:providers:pulumi::default"];
+    Resource2 [label="urn:pulumi:staging::valornet-infra::pulumi:pulumi:Stack::valornet-infra-staging"];
+    Resource3 [label="urn:pulumi:staging::valornet-infra::pulumi:providers:aws::default_6_80_0"];
+    Resource4 [label="urn:pulumi:staging::valornet-infra::pulumi:providers:awsx::default_2_21_1"];
+    Resource5 [label="urn:pulumi:staging::valornet-infra::pulumi:providers:random::default_4_18_2"];
+    Resource6 [label="urn:pulumi:staging::valornet-infra::aws:ecr/repository:Repository::staging-auth-service-repo"];
+    Resource6 -> Resource2 [color = "#AA6639"];
+}
