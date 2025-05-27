@@ -1,7 +1,7 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 
-import { createAlb } from "../shared/alb";
+import { createAlb, createTgAndRule } from "../shared/alb";
 import {
     createAlbIntegration,
     createApiMapping,
@@ -12,14 +12,16 @@ import {
 } from "../shared/apiGateway";
 
 import * as random from "@pulumi/random";
+import * as fs from "fs";
+import { createBastionHost } from "../shared/bastion";
+import { createEcsTaskRole, makeHttpFargate, makeWorkerFargate } from "../shared/ecs";
 import { createRedisCluster } from "../shared/elastiCache";
 import { createRdsInstance } from "../shared/rds";
-import { createJsonSecret, ensureSecret, getSecretValue } from "../shared/secrets";
+import { createJsonSecret, ensureJsonSecretWithDefault, ensureTextSecret, getSecretString } from "../shared/secrets";
 import { createSecurityGroup } from "../shared/securityGroups";
 import { createVpc } from "../shared/vpc";
 import { createVpcLink } from "../shared/vpcLink";
 import { httpServices, workerServices } from "./servicesConfig";
-
 
 /* Config -------------------------------------------------- */
 const stack   = pulumi.getStack();
@@ -29,6 +31,14 @@ const certArn = "arn:aws:acm:us-east-1:331240720676:certificate/f5811ee2-2f5e-44
 const vpc      = createVpc(`${stack}`);
 
 /* Security Groups ---------------------------------------- */
+const bastionSg = createSecurityGroup(`${stack}-bastion-sg`, vpc.vpc.id, [
+    {
+        fromPort: 22,
+        toPort: 22,
+        protocol: "tcp",
+        cidrBlocks: ["0.0.0.0/0"],
+    },
+]);
 const sgAlb = createSecurityGroup(`${stack}-alb-sg`, vpc.vpc.id, [{
     fromPort: 80,
     toPort: 80,
@@ -36,8 +46,8 @@ const sgAlb = createSecurityGroup(`${stack}-alb-sg`, vpc.vpc.id, [{
     cidrBlocks: ["10.0.0.0/16"]
 }]);
 const sgTasks = createSecurityGroup(`${stack}-task-sg`, vpc.vpc.id, [{
-    fromPort: 80,
-    toPort: 80,
+    fromPort: 9000,
+    toPort: 9000,
     protocol: "tcp",
     securityGroups: [sgAlb.id]
 }]);
@@ -46,21 +56,25 @@ const sgDb = createSecurityGroup(`${stack}-db-sg`, vpc.vpc.id, [
         fromPort: 3306,
         toPort: 3306,
         protocol: "tcp",
-        securityGroups: [sgTasks.id],
-    },
-    {
-        fromPort: 3306,
-        toPort: 3306,
-        protocol: "tcp",
-        cidrBlocks: ["177.10.88.74/32"],
+        securityGroups: [sgTasks.id, bastionSg.id],
     },
 ]);
+
+
 const sgRedis = createSecurityGroup(`${stack}-redis-sg`, vpc.vpc.id, [{
     fromPort: 6379,
     toPort: 6379,
     protocol: "tcp",
     securityGroups: [sgTasks.id],
 }]);
+
+/* Bastion Host ---------------------------------------- */
+const bastion = createBastionHost(`${stack}-bastion`, {
+    vpcId: vpc.vpc.id,
+    publicSubnetId: vpc.publicSubnetIds[0],
+    keyName: "pulumi-bastion-key",
+}, bastionSg.id);
+
 
 /* ALB ----------------------------------------------------------------- */
 const alb      = createAlb(`${stack}-alb`, vpc, [sgAlb.id]);
@@ -73,12 +87,12 @@ const dbPassword = new random.RandomPassword(`${stack}-db-password`, {
 
 const rds = createRdsInstance({
     name: `${stack}-valornet-rds`,
-    dbName: `${stack}CentralDb`,
+    dbName: `valornet`,
     vpcSecurityGroupIds: [sgDb.id],
     subnetIds: vpc.privateSubnetIds,
-    username: `${stack}valornet`,
+    username: `valornet`,
     password: dbPassword.apply(p => p),
-    publicpubliclyAccessible: true
+    publicAccessible: false
 });
 
 const redis = createRedisCluster({
@@ -86,32 +100,36 @@ const redis = createRedisCluster({
     subnetIds: vpc.privateSubnetIds,
     securityGroupIds: [sgRedis.id],
 });
-
-const clientsSecretName = `${stack}-clients-secret`;
-ensureSecret(clientsSecretName);
-
-getSecretValue(clientsSecretName).then(secretValue => {
-    if (!secretValue) {
-        console.warn(`⚠️ No clients found in ${clientsSecretName}. Skipping client secrets creation.`);
-        return;
-    }
-
-    const clients = JSON.parse(secretValue) as string[];
-
-    clients.forEach(client => {
-        const clientSecretName = `${stack}-${client}-secret`;
-        ensureSecret(clientSecretName, `Secret for client ${client}`);
+const clientsSecret = ensureJsonSecretWithDefault(
+    `${stack}-clients-secret`,
+    ["demo"],
+    "Lista de tenants"
+);
+  
+const clientsJson = getSecretString(clientsSecret.id, clientsSecret);
+const clientsAppKeys = {};
+clientsJson.apply(str => {
+    const tenants = JSON.parse(str) as string[];
+    tenants.forEach(t => {
+            ensureJsonSecretWithDefault(
+            `${stack}-${t}-secret`,
+            {},
+            `Secret for tenant ${t}`
+        );
     });
 });
 
-const rdsConnectionData = pulumi.all([rds.endpoint, rds.port, dbPassword]).apply(([endpoint, port, password]) => ({
+const generalSecretData = pulumi.all([rds.endpoint, rds.port, dbPassword, bastion.publicIp, bastion.publicDns, redis.cacheNodes]).apply(([endpoint, port, password, bastionIp, bastionDns, redisNode]) => ({
     host: endpoint,
     port: port,
-    username: `${stack}-valornet`,
+    username: `valornet`,
     password: password,
+    bastionPublicIp: bastionIp,
+    bastionDns: bastionDns,
+    redisEndpoint: redisNode[0].address
 }));
 
-createJsonSecret(`${stack}-rds-connection-secret`, rdsConnectionData, `RDS connection details for ${stack}`);
+createJsonSecret(`${stack}-general-secret`, generalSecretData, `RDS connection details for ${stack}`);
 
 
 /* ECR --------------------------------------- */
@@ -142,47 +160,77 @@ for(const svc of [...httpServices, ...workerServices]) {
 }
 
 /* Listener + Target Groups + ECS --------------------------------------- */
-// const listener = new aws.lb.Listener(`${stack}-http`, {
-//   loadBalancerArn: alb.loadBalancer.arn,
-//   port: 80, protocol: "HTTP",
-//   defaultActions: [{ type: "fixed-response", fixedResponse: {statusCode:"404", contentType:"text/plain"} }],
-// });
 
-// const cluster = new aws.ecs.Cluster(`${stack}-cluster`);
+const laravelAppKey = new random.RandomPassword("app-key", {
+    length: 32,
+    special: false,
+    overrideSpecial: "_-",
+}).result.apply(p => Buffer.from(p, "utf8").toString("base64"));
+const appKeySecret = ensureTextSecret(`${stack}-laravel-app-key`, laravelAppKey);
 
-// httpServices.forEach((svc, idx) => {
-//     const tg = createTgAndRule({
-//         albArn: alb.loadBalancer.arn,
-//         listenerArn: listener.arn,
-//         svc,
-//         vpcId: vpc.vpc.id,
-//         priority: 10 + idx,
-//     });
+const privateKey = fs.readFileSync("./.keys/staging/oauth-private.key", "utf8");
+const publicKey  = fs.readFileSync("./.keys/staging/oauth-public.key", "utf8");
+
+const jwtPrivSecret = ensureTextSecret(`${stack}-jwt-private`, privateKey);
+const jwtPubSecret  = ensureTextSecret(`${stack}-jwt-public`,  publicKey);
+
+const listener = alb.listeners.apply(listeners => listeners![0].arn);
+const cluster = new aws.ecs.Cluster(`${stack}-cluster`);
+httpServices.forEach((svc, idx) => {
+    const tg = createTgAndRule({
+        albArn: alb.loadBalancer.arn,
+        listenerArn: listener,
+        svc,
+        vpcId: vpc.vpc.id,
+        priority: 10 + idx,
+    });
     
-//     const taskRole = createEcsTaskRole({
-//         name: `${stack}-${svc.name}`,
-//         policies: svc.policies,
-//     });
+    const taskRole = createEcsTaskRole({
+        name: `${stack}-${svc.name}`,
+        policies: svc.policies,
+    });
 
-//     makeHttpFargate({
-//         svc: { name: svc.name, image: svc.image },
-//         clusterArn: cluster.arn,
-//         tg,
-//         sgIds:   [sgTasks.id],
-//         subnets: vpc.privateSubnetIds,
-//         taskRole
-//     })
+    const secrets: Record<string, aws.secretsmanager.Secret> = {
+        APP_KEY: appKeySecret,
+    };
     
-// });
+    if (svc.path === "auth") {
+        secrets.OAUTH_PRIVATE_KEY = jwtPrivSecret;
+        secrets.OAUTH_PUBLIC_KEY = jwtPubSecret;
+    }
 
-// workerServices.forEach(w =>
-//     makeWorkerFargate({
-//         svc: { name: w.name, image: w.image, command: w.command },
-//         clusterArn: cluster.arn,
-//         sgIds:   [sgTasks.id],
-//         subnets: vpc.privateSubnetIds,
-//     })
-// );
+    makeHttpFargate({
+        svc: { name: svc.name, image: svc.image, port: svc.port},
+        clusterArn: cluster.arn,
+        tg,
+        sgIds:   [sgTasks.id],
+        subnets: vpc.privateSubnetIds,
+        taskRole,
+        env: {
+            APP_NAME: "AuthService",
+            APP_ENV: "staging",
+            APP_DEBUG: "false",
+            APP_URL: "https://stg.valornetvets.com",
+            QUEUE_CONNECTION: "sqs",
+            REDIS_CLIENT: "phpredis",
+            REDIS_HOST: redis.cacheNodes.apply(nodes => nodes[0].address),
+            REDIS_PORT: "6379",
+            AWS_EC2_METADATA_DISABLED: "true",
+            AWS_DEFAULT_REGION: aws.config.requireRegion(),
+        },
+        secrets
+    })
+    
+});
+
+workerServices.forEach(w =>
+    makeWorkerFargate({
+        svc: { name: w.name, image: w.image, command: w.command },
+        clusterArn: cluster.arn,
+        sgIds:   [sgTasks.id],
+        subnets: vpc.privateSubnetIds,
+    })
+);
 
 /* API Gateway ----------------------------------------------------------- */
 const httpApi  = createHttpApi(`${stack}-api`);
@@ -211,13 +259,15 @@ createApiMapping("map", httpApi.id, domain.id, stage.name, "");
 
 /* Outputs --------------------------------------------------------------- */
 // Register Pulumi stack outputs
-export const apiUrl = pulumi.Output.create(httpApi.apiEndpoint);
-export const ecrRepoUrls = pulumi.Output.create(repoUrls);
-export const apiDomainTarget = pulumi.Output.create(domain.domainNameConfiguration.targetDomainName);
+export const apiUrl = httpApi.apiEndpoint;
+export const ecrRepoUrls = repoUrls;
+export const apiDomainTarget = domain.domainNameConfiguration.targetDomainName;
 
-export const rdsEndpoint = pulumi.Output.create(rds.endpoint);
-export const rdsPort = pulumi.Output.create(rds.port);
-export const rdsUsername = pulumi.Output.create(`${stack}-valornet`);
-export const rdsPassword = pulumi.Output.create(pulumi.secret(dbPassword.apply(p => p)));
+// Database credentials
+export const rdsEndpoint = rds.endpoint;
+export const rdsPort = rds.port;
+export const rdsUsername = `valornet`;
+export const rdsPassword = pulumi.secret(dbPassword);
 
-export const redisEndpoint = pulumi.Output.create(redis.cacheNodes.apply(nodes => nodes[0].address));
+// Redis endpoint
+export const redisEndpoint = redis.cacheNodes.apply(nodes => nodes[0].address);

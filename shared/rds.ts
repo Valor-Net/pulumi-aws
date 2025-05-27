@@ -11,7 +11,7 @@ interface RdsArgs {
     dbEngine?: "mysql" | "postgres";
     username: string;
     password: Input<string>;
-    publicpubliclyAccessible: boolean
+    publicAccessible: boolean
 }
 
 export function createRdsInstance(args: RdsArgs): aws.rds.Instance {
@@ -30,7 +30,7 @@ export function createRdsInstance(args: RdsArgs): aws.rds.Instance {
         dbSubnetGroupName: subnetGroup.name,
         vpcSecurityGroupIds: args.vpcSecurityGroupIds,
         skipFinalSnapshot: true,
-        publiclyAccessible: args.publicpubliclyAccessible,
+        publiclyAccessible: args.publicAccessible,
         multiAz: false,
     });
 }

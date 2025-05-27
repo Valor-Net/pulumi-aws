@@ -1,22 +1,60 @@
+// secrets.ts
 import * as aws from "@pulumi/aws";
-import { Output } from "@pulumi/pulumi";
+import * as pulumi from "@pulumi/pulumi";
+
+export function ensureJsonSecretWithDefault(
+    logicalName: string,
+    defaultValue: any,
+    description?: string
+): aws.secretsmanager.Secret {
+
+    const secret = new aws.secretsmanager.Secret(logicalName, {
+        name: logicalName,
+        description: description ?? `Secret for ${logicalName}`,
+    });
+
+    new aws.secretsmanager.SecretVersion(
+        `${logicalName}-initial`,
+        {
+            secretId: secret.id,
+            secretString: JSON.stringify(defaultValue),
+        },
+        {
+            protect: true,
+            deleteBeforeReplace: false,
+        },
+    );
+
+    return secret;
+}
+
+export function getSecretString(
+    secretId: pulumi.Input<string>,
+    dependsOn: pulumi.Resource
+): pulumi.Output<string> {
+    return pulumi.output(
+        aws.secretsmanager.getSecretVersionOutput(
+            { secretId },
+            { dependsOn }
+        )
+    ).apply(v => v.secretString!);
+}
+
 
 export function ensureSecret(name: string, description?: string): aws.secretsmanager.Secret {
     return new aws.secretsmanager.Secret(name, {
+        name,
         description: description ?? `Secret for ${name}`,
     });
 }
 
-export async function getSecretValue(secretName: string): Promise<string | undefined> {
-    try {
-        const secret = await aws.secretsmanager.getSecretVersion({ secretId: secretName });
-        return secret.secretString;
-    } catch {
-        return undefined;
-    }
+export function getSecretValueOutput(secretName: pulumi.Input<string>): pulumi.Output<string | undefined> {
+    return pulumi.output(secretName).apply(sn =>
+        aws.secretsmanager.getSecretVersionOutput({ secretId: sn }).apply(sv => sv.secretString)
+    );
 }
 
-export function createJsonSecret(name: string, data: Output<object>, description?: string) {
+export function createJsonSecret(name: string, data: pulumi.Output<object>, description?: string) {
     const secret = ensureSecret(name);
 
     const secretString = data.apply(d => JSON.stringify(d));
@@ -26,5 +64,14 @@ export function createJsonSecret(name: string, data: Output<object>, description
         secretString: secretString,
     });
 
+    return secret;
+}
+
+export function ensureTextSecret(name: string, value: pulumi.Input<string>) {
+    const secret = new aws.secretsmanager.Secret(name, {name});
+    new aws.secretsmanager.SecretVersion(`${name}-v`, {
+        secretId: secret.id,
+        secretString: value,
+    });
     return secret;
 }

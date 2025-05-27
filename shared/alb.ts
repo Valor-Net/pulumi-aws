@@ -18,13 +18,13 @@ export function createAlb(
 export function createTgAndRule(args: {
     albArn: Input<string>;
     listenerArn: Input<string>;
-    svc: { name: string; healthPath?: string };
+    svc: { name: string; healthPath?: string, path: string, port: number };
     vpcId: Input<string>;
     priority: number;
 }) {
     const tg = new aws.lb.TargetGroup(`tg-${args.svc.name}`, {
         vpcId: args.vpcId,
-        port: 80,
+        port: args.svc.port,
         protocol: "HTTP",
         targetType: "ip",
         healthCheck: { path: args.svc.healthPath ?? "/health" },
@@ -35,7 +35,7 @@ export function createTgAndRule(args: {
         priority: args.priority,
         actions: [{ type: "forward", targetGroupArn: tg.arn }],
         conditions: [{
-            pathPattern: { values: [`/api/v1/${args.svc.name}/*`] },
+            pathPattern: { values: [`/${args.svc.path}/v1/*`] },
         }],
     });
   
