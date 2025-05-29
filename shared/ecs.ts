@@ -16,46 +16,77 @@ export function makeHttpFargate(args: {
     subnets: pulumi.Input<pulumi.Input<string>[]>;
     assignPublicIp?: boolean;
     taskRole: aws.iam.Role;
-    executionRole?: aws.iam.Role; // Novo parâmetro opcional
+    executionRole?: aws.iam.Role;
     env?: Record<string, pulumi.Input<string>>;
     secrets?: Record<string, aws.secretsmanager.Secret>;
+    nginxSidecarImage?: string;
 }) {
-    // Se não fornecer executionRole, criar uma padrão
     const execRole = args.executionRole || createEcsExecutionRole(`${args.svc.name}-execution`);
+
+    const phpContainerName = args.nginxSidecarImage ? "php" : "web";
+    const phpContainer = {
+        name: args.svc.name,
+        image: args.svc.image,
+        cpu: 256,
+        memory: 512,
+        portMappings: args.nginxSidecarImage
+            ? undefined
+            : [{
+                containerPort: args.svc.port,
+                hostPort:      args.svc.port,
+                targetGroup:   args.tg,
+            }],
+        environment: Object.entries(args.env ?? {}).map(([k, v]) => ({
+            name: k,
+            value: v,
+        })),
+        secrets: Object.entries(args.secrets ?? {}).map(([k, secret]) => ({
+            name: k,
+            valueFrom: secret.arn,
+        })),
+        logConfiguration: {
+            logDriver: "awslogs",
+            options: {
+                "awslogs-create-group": "true",
+                "awslogs-group": `/ecs/${args.svc.name}`,
+                "awslogs-region": aws.getRegion().then(r => r.name),
+                "awslogs-stream-prefix": "ecs",
+            },
+        },
+    };
+
+    const containers: Record<string, any> = {
+        [phpContainerName]: phpContainer,
+    };
+
+    if (args.nginxSidecarImage) {
+        containers["web"] = {
+            name: "web",
+            image: args.nginxSidecarImage,
+            cpu: 128,
+            memory: 128,
+            portMappings: [{ containerPort: 80, hostPort: 80, targetGroup: args.tg }],
+            essential: true,
+            logConfiguration: {
+                logDriver: "awslogs",
+                options: {
+                    "awslogs-create-group": "true",
+                    "awslogs-group": `/ecs/${args.svc.name}-nginx`,
+                    "awslogs-region": aws.getRegion().then(r => r.name),
+                    "awslogs-stream-prefix": "ecs",
+                },
+            },
+        };
+    }
     
     return new awsx.ecs.FargateService(`${args.svc.name}-svc`, {
         forceNewDeployment: true,
         cluster: args.clusterArn,
         desiredCount: 1,
         taskDefinitionArgs: {
-            taskRole: { roleArn: args.taskRole.arn },        // Role para acessar AWS services
-            executionRole: { roleArn: execRole.arn },        // Role para executar a task
-            containers: {
-                web: {
-                    name: args.svc.name,
-                    image: args.svc.image,
-                    cpu: 256,
-                    memory: 512,
-                    portMappings: [{ containerPort: args.svc.port, targetGroup: args.tg }],
-                    environment: Object.entries(args.env ?? {}).map(([k, v]) => ({
-                        name: k,
-                        value: v
-                    })),
-                    secrets: Object.entries(args.secrets ?? {}).map(([k, secret]) => ({
-                        name: k,
-                        valueFrom: secret.arn,
-                    })),
-                    logConfiguration: {
-                        logDriver: "awslogs",
-                        options: {
-                            "awslogs-create-group": "true",
-                            "awslogs-group": `/ecs/${args.svc.name}`,
-                            "awslogs-region": aws.getRegion().then(r => r.name),
-                            "awslogs-stream-prefix": "ecs"
-                        }
-                    }
-                },
-            },
+            taskRole: { roleArn: args.taskRole.arn },
+            executionRole: { roleArn: execRole.arn },
+            containers
         },
         networkConfiguration: {
             assignPublicIp: args.assignPublicIp ?? false,
@@ -71,15 +102,15 @@ export function makeWorkerFargate(args: {
     sgIds: pulumi.Input<string>[];
     subnets: pulumi.Input<pulumi.Input<string>[]>;
     assignPublicIp?: boolean;
-    taskRole?: aws.iam.Role;        // Novo parâmetro opcional
-    executionRole?: aws.iam.Role;   // Novo parâmetro opcional
+    taskRole?: aws.iam.Role;
+    executionRole?: aws.iam.Role;
     env?: Record<string, pulumi.Input<string>>;
     secrets?: Record<string, aws.secretsmanager.Secret>;
 }) {
     const execRole = args.executionRole || createEcsExecutionRole(`${args.svc.name}-execution`);
     const tRole = args.taskRole || createEcsTaskRole({
         name: `${args.svc.name}-task`,
-        policies: [] // Worker básico sem políticas especiais
+        policies: []
     });
 
     return new awsx.ecs.FargateService(`${args.svc.name}-worker`, {

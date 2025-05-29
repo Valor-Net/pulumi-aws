@@ -5,6 +5,7 @@ interface HttpSvc {
     name: string;
     path: string;
     image: string;
+    nginxSidecarImage?: string;
     port: number;
     tech: string;
     policies?: (string | Output<string>)[];
@@ -14,6 +15,7 @@ interface HttpSvc {
 interface WorkerSvc {
     name: string;
     image: string;
+    nginxSidecarImage?: string;
     command: Input<string>[];
     policies?: string[];
     cpu?: number;
@@ -48,6 +50,7 @@ const httpServices: HttpSvc[] = [
         healthPath: "/health",
         port: 9000,
         image: "331240720676.dkr.ecr.us-east-1.amazonaws.com/staging-auth-service-repo-18f6832:latest",
+        nginxSidecarImage: "331240720676.dkr.ecr.us-east-1.amazonaws.com/staging-auth-service-nginx-repo-b64f48f:latest",
         tech: "laravel",
         policies: [
             aws.iam.ManagedPolicy.AmazonSQSFullAccess,

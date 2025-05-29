@@ -19,16 +19,16 @@ import { createRedisCluster } from "../shared/elastiCache";
 import { createRdsInstance } from "../shared/rds";
 import { createJsonSecret, ensureJsonSecretWithDefault, ensureTextSecret, getSecretString } from "../shared/secrets";
 import { createSecurityGroup } from "../shared/securityGroups";
-import { createVpc } from "../shared/vpc";
+import { createVpc, createVpcInterfaceEndpoint } from "../shared/vpc";
 import { createVpcLink } from "../shared/vpcLink";
 import { httpServices, workerServices } from "./servicesConfig";
 
 /* Config -------------------------------------------------- */
-const stack   = pulumi.getStack();
+const stack = pulumi.getStack();
 const certArn = "arn:aws:acm:us-east-1:331240720676:certificate/f5811ee2-2f5e-4424-a216-5c2a794e78c3";
 
 /* VPC -------------------------------------------------- */
-const vpc      = createVpc(`${stack}`);
+const vpc = createVpc(`${stack}`);
 
 /* Security Groups ---------------------------------------- */
 const bastionSg = createSecurityGroup(`${stack}-bastion-sg`, vpc.vpc.id, [
@@ -45,12 +45,14 @@ const sgAlb = createSecurityGroup(`${stack}-alb-sg`, vpc.vpc.id, [{
     protocol: "tcp",
     cidrBlocks: ["10.0.0.0/16"]
 }]);
-const sgTasks = createSecurityGroup(`${stack}-task-sg`, vpc.vpc.id, [{
-    fromPort: 9000,
-    toPort: 9000,
-    protocol: "tcp",
-    securityGroups: [sgAlb.id]
-}]);
+const sgTasks = createSecurityGroup(`${stack}-task-sg`, vpc.vpc.id, [
+    {
+        fromPort: 80, toPort: 80, protocol: "tcp", securityGroups: [sgAlb.id],
+    },
+    {
+        fromPort: 9000, toPort: 9000, protocol: "tcp", securityGroups: [sgAlb.id],
+    },
+]);
 const sgDb = createSecurityGroup(`${stack}-db-sg`, vpc.vpc.id, [
     {
         fromPort: 3306,
@@ -59,14 +61,37 @@ const sgDb = createSecurityGroup(`${stack}-db-sg`, vpc.vpc.id, [
         securityGroups: [sgTasks.id, bastionSg.id],
     },
 ]);
-
-
 const sgRedis = createSecurityGroup(`${stack}-redis-sg`, vpc.vpc.id, [{
     fromPort: 6379,
     toPort: 6379,
     protocol: "tcp",
     securityGroups: [sgTasks.id],
 }]);
+const sgVpcEndpoints = createSecurityGroup(`${stack}-vpc-endpoints-sg`, vpc.vpc.id, [{
+    protocol: "tcp",
+    fromPort: 443,
+    toPort: 443,
+    securityGroups: [sgTasks.id],
+}]);
+
+// Interface VPC Endpoints --------------------------------------*/
+const vpceSecrets = createVpcInterfaceEndpoint({
+    name: "vpce-secrets",
+    vpcId: vpc.vpc.id,
+    serviceName: `com.amazonaws.${aws.config.region}.secretsmanager`,
+    subnetIds: vpc.privateSubnetIds,
+    securityGroupIds: [sgVpcEndpoints.id],
+    privateDnsEnabled: true,
+});
+
+const vpceSqs = createVpcInterfaceEndpoint({
+    name: "vpce-sqs",
+    vpcId: vpc.vpc.id,
+    serviceName: `com.amazonaws.${aws.config.region}.sqs`,
+    subnetIds: vpc.privateSubnetIds,
+    securityGroupIds: [sgVpcEndpoints.id],
+    privateDnsEnabled: true,
+});
 
 /* Bastion Host ---------------------------------------- */
 const bastion = createBastionHost(`${stack}-bastion`, {
@@ -77,7 +102,7 @@ const bastion = createBastionHost(`${stack}-bastion`, {
 
 
 /* ALB ----------------------------------------------------------------- */
-const alb      = createAlb(`${stack}-alb`, vpc, [sgAlb.id]);
+const alb = createAlb(`${stack}-alb`, vpc, [sgAlb.id]);
 
 /* DB & REDIS --------------------------------------------- */
 const dbPassword = new random.RandomPassword(`${stack}-db-password`, {
@@ -105,13 +130,12 @@ const clientsSecret = ensureJsonSecretWithDefault(
     ["demo"],
     "Lista de tenants"
 );
-  
+
 const clientsJson = getSecretString(clientsSecret.id, clientsSecret);
-const clientsAppKeys = {};
 clientsJson.apply(str => {
     const tenants = JSON.parse(str) as string[];
     tenants.forEach(t => {
-            ensureJsonSecretWithDefault(
+        ensureJsonSecretWithDefault(
             `${stack}-${t}-secret`,
             {},
             `Secret for tenant ${t}`
@@ -134,7 +158,7 @@ createJsonSecret(`${stack}-general-secret`, generalSecretData, `RDS connection d
 
 /* ECR --------------------------------------- */
 const repoUrls: Record<string, pulumi.Output<string>> = {};
-for(const svc of [...httpServices, ...workerServices]) {
+for (const svc of [...httpServices, ...workerServices]) {
 
     const repo = new aws.ecr.Repository(`${stack}-${svc.name}-repo`, {
         imageScanningConfiguration: { scanOnPush: false },
@@ -142,7 +166,7 @@ for(const svc of [...httpServices, ...workerServices]) {
         encryptionConfigurations: [{ encryptionType: "AES256" }],
         tags: { service: svc.name, environment: stack },
     });
-      
+
     new aws.ecr.LifecyclePolicy(`${stack}-${svc.name}-lifecycle`, {
         repository: repo.name,
         policy: pulumi.interpolate`{
@@ -155,6 +179,29 @@ for(const svc of [...httpServices, ...workerServices]) {
         }`,
     });
 
+    if (svc.nginxSidecarImage) {
+        const nginxRepo = new aws.ecr.Repository(`${stack}-${svc.name}-nginx-repo`, {
+            imageScanningConfiguration: { scanOnPush: false },
+            imageTagMutability: "MUTABLE",
+            encryptionConfigurations: [{ encryptionType: "AES256" }],
+            tags: { service: svc.name, environment: stack },
+        });
+
+        new aws.ecr.LifecyclePolicy(`${stack}-${svc.name}-nginx-lifecycle`, {
+            repository: nginxRepo.name,
+            policy: pulumi.interpolate`{
+                "rules": [{
+                    "rulePriority": 1,
+                    "description": "Keep last 3 images",
+                    "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 3 },
+                    "action": { "type": "expire" }
+                }]
+            }`,
+        });
+
+        repoUrls[`${svc.name}-nginx`] = repo.repositoryUrl;
+
+    }
 
     repoUrls[svc.name] = repo.repositoryUrl;
 }
@@ -169,22 +216,25 @@ const laravelAppKey = new random.RandomPassword("app-key", {
 const appKeySecret = ensureTextSecret(`${stack}-laravel-app-key`, laravelAppKey);
 
 const privateKey = fs.readFileSync("./.keys/staging/oauth-private.key", "utf8");
-const publicKey  = fs.readFileSync("./.keys/staging/oauth-public.key", "utf8");
+const publicKey = fs.readFileSync("./.keys/staging/oauth-public.key", "utf8");
 
 const jwtPrivSecret = ensureTextSecret(`${stack}-jwt-private`, privateKey);
-const jwtPubSecret  = ensureTextSecret(`${stack}-jwt-public`,  publicKey);
+const jwtPubSecret = ensureTextSecret(`${stack}-jwt-public`, publicKey);
 
 const listener = alb.listeners.apply(listeners => listeners![0].arn);
 const cluster = new aws.ecs.Cluster(`${stack}-cluster`);
+
 httpServices.forEach((svc, idx) => {
+
+    const targetPort = svc.nginxSidecarImage ? 80 : svc.port;
     const tg = createTgAndRule({
         albArn: alb.loadBalancer.arn,
         listenerArn: listener,
-        svc,
+        svc: { ...svc, port: targetPort },
         vpcId: vpc.vpc.id,
         priority: 10 + idx,
     });
-    
+
     const taskRole = createEcsTaskRole({
         name: `${stack}-${svc.name}`,
         policies: svc.policies,
@@ -193,17 +243,19 @@ httpServices.forEach((svc, idx) => {
     const secrets: Record<string, aws.secretsmanager.Secret> = {
         APP_KEY: appKeySecret,
     };
-    
+
     if (svc.path === "auth") {
         secrets.OAUTH_PRIVATE_KEY = jwtPrivSecret;
         secrets.OAUTH_PUBLIC_KEY = jwtPubSecret;
     }
 
+
+
     makeHttpFargate({
-        svc: { name: svc.name, image: svc.image, port: svc.port},
+        svc: { name: svc.name, image: svc.image, port: svc.port },
         clusterArn: cluster.arn,
         tg,
-        sgIds:   [sgTasks.id],
+        sgIds: [sgTasks.id],
         subnets: vpc.privateSubnetIds,
         taskRole,
         env: {
@@ -215,26 +267,26 @@ httpServices.forEach((svc, idx) => {
             REDIS_CLIENT: "phpredis",
             REDIS_HOST: redis.cacheNodes.apply(nodes => nodes[0].address),
             REDIS_PORT: "6379",
-            AWS_EC2_METADATA_DISABLED: "true",
             AWS_DEFAULT_REGION: aws.config.requireRegion(),
         },
-        secrets
+        secrets,
+        nginxSidecarImage: svc.nginxSidecarImage
     })
-    
+
 });
 
 workerServices.forEach(w =>
     makeWorkerFargate({
         svc: { name: w.name, image: w.image, command: w.command },
         clusterArn: cluster.arn,
-        sgIds:   [sgTasks.id],
+        sgIds: [sgTasks.id],
         subnets: vpc.privateSubnetIds,
     })
 );
 
 /* API Gateway ----------------------------------------------------------- */
-const httpApi  = createHttpApi(`${stack}-api`);
-const vpcLink  = createVpcLink(`${stack}-vpclink`, vpc.privateSubnetIds);
+const httpApi = createHttpApi(`${stack}-api`);
+const vpcLink = createVpcLink(`${stack}-vpclink`, vpc.privateSubnetIds);
 const albInt = alb.listeners.apply(listeners => {
     if (!listeners || listeners.length === 0) {
         throw new Error("No listeners available on ALB.");
@@ -253,7 +305,7 @@ httpServices.forEach(s =>
 );
 
 /* Stage + Domain -------------------------------------------------------- */
-const stage  = createStage("default", httpApi.id, "$default");
+const stage = createStage("default", httpApi.id, "$default");
 const domain = createDomainName("api-domain", "stg.valornetvets.com", certArn);
 createApiMapping("map", httpApi.id, domain.id, stage.name, "");
 
@@ -271,3 +323,9 @@ export const rdsPassword = pulumi.secret(dbPassword);
 
 // Redis endpoint
 export const redisEndpoint = redis.cacheNodes.apply(nodes => nodes[0].address);
+
+// Interface VPC Endpoints
+export const vpceSecretsId   = vpceSecrets.id;
+export const vpceSecretsDns  = vpceSecrets.dnsEntries;
+export const vpceSqsId       = vpceSqs.id;
+export const vpceSqsDns      = vpceSqs.dnsEntries;
