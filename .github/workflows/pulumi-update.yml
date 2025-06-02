@@ -88,7 +88,8 @@ jobs:
           AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION:           ${{ secrets.AWS_REGION }}
-          PULUMI_BACKEND_URL:   "s3://valornet-pulumi-backend"
+          PULUMI_BACKEND_URL:   ${{ secrets.PULUMI_BACKEND_URL }}
+          PULUMI_CONFIG_PASSPHRASE:   ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
           IMAGE_TAG: ${{ github.event.inputs.image_tag }}
         run: |
           echo "🔄 Atualizando infraestrutura para tag: $IMAGE_TAG"
