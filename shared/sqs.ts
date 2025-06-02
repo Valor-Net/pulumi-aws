@@ -7,6 +7,7 @@ interface SqsArgs {
 
 export function createQueue({ name, tags }: SqsArgs): aws.sqs.Queue {
     return new aws.sqs.Queue(name, {
+        name: name,
         visibilityTimeoutSeconds: 60,
         messageRetentionSeconds: 86400,
         tags,

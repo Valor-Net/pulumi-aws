@@ -14,17 +14,21 @@ import {
 import * as random from "@pulumi/random";
 import * as fs from "fs";
 import { createBastionHost } from "../shared/bastion";
-import { createEcsTaskRole, makeHttpFargate, makeWorkerFargate } from "../shared/ecs";
+import { createEcrRepo } from "../shared/ecr";
+import { createEcsTaskRole, createSdService, makeHttpFargate, makeWorkerFargate } from "../shared/ecs";
 import { createRedisCluster } from "../shared/elastiCache";
 import { createRdsInstance } from "../shared/rds";
 import { createJsonSecret, ensureJsonSecretWithDefault, ensureTextSecret, getSecretString } from "../shared/secrets";
 import { createSecurityGroup } from "../shared/securityGroups";
+import { createQueue } from "../shared/sqs";
 import { createVpc, createVpcInterfaceEndpoint } from "../shared/vpc";
 import { createVpcLink } from "../shared/vpcLink";
 import { httpServices, workerServices } from "./servicesConfig";
 
 /* Config -------------------------------------------------- */
 const stack = pulumi.getStack();
+const caller = aws.getCallerIdentity({});
+const accountId = caller.then(c => c.accountId);
 const certArn = "arn:aws:acm:us-east-1:331240720676:certificate/f5811ee2-2f5e-4424-a216-5c2a794e78c3";
 
 /* VPC -------------------------------------------------- */
@@ -93,6 +97,17 @@ const vpceSqs = createVpcInterfaceEndpoint({
     privateDnsEnabled: true,
 });
 
+/* SQS ------------------------------------------------------------*/ 
+const stagingQueue = createQueue({
+    name: "valornet-staging-email-queue",
+    tags: {
+        Environment: "staging",
+        Project: "valornet"
+    }
+});
+
+export const devQueueUrl = stagingQueue.id;
+
 /* Bastion Host ---------------------------------------- */
 const bastion = createBastionHost(`${stack}-bastion`, {
     vpcId: vpc.vpc.id,
@@ -103,6 +118,12 @@ const bastion = createBastionHost(`${stack}-bastion`, {
 
 /* ALB ----------------------------------------------------------------- */
 const alb = createAlb(`${stack}-alb`, vpc, [sgAlb.id]);
+
+/* PrivateDNS ------------------------------------------------------ */
+const privateDnsNs = new aws.servicediscovery.PrivateDnsNamespace(`${stack}-ns`, {
+    name: `${stack}.local`,
+    vpc:  vpc.vpc.id,
+});
 
 /* DB & REDIS --------------------------------------------- */
 const dbPassword = new random.RandomPassword(`${stack}-db-password`, {
@@ -159,47 +180,12 @@ createJsonSecret(`${stack}-general-secret`, generalSecretData, `RDS connection d
 /* ECR --------------------------------------- */
 const repoUrls: Record<string, pulumi.Output<string>> = {};
 for (const svc of [...httpServices, ...workerServices]) {
+    const repo = createEcrRepo(`${stack}-${svc.name}-repo`, stack, svc);
 
-    const repo = new aws.ecr.Repository(`${stack}-${svc.name}-repo`, {
-        imageScanningConfiguration: { scanOnPush: false },
-        imageTagMutability: "MUTABLE",
-        encryptionConfigurations: [{ encryptionType: "AES256" }],
-        tags: { service: svc.name, environment: stack },
-    });
+    if (svc.nginxSidecarImageRepo) {
+        const nginxRepo = createEcrRepo(`${stack}-${svc.name}-nginx-repo`, stack, svc);
 
-    new aws.ecr.LifecyclePolicy(`${stack}-${svc.name}-lifecycle`, {
-        repository: repo.name,
-        policy: pulumi.interpolate`{
-            "rules": [{
-                "rulePriority": 1,
-                "description": "Keep last 3 images",
-                "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 3 },
-                "action": { "type": "expire" }
-            }]
-        }`,
-    });
-
-    if (svc.nginxSidecarImage) {
-        const nginxRepo = new aws.ecr.Repository(`${stack}-${svc.name}-nginx-repo`, {
-            imageScanningConfiguration: { scanOnPush: false },
-            imageTagMutability: "MUTABLE",
-            encryptionConfigurations: [{ encryptionType: "AES256" }],
-            tags: { service: svc.name, environment: stack },
-        });
-
-        new aws.ecr.LifecyclePolicy(`${stack}-${svc.name}-nginx-lifecycle`, {
-            repository: nginxRepo.name,
-            policy: pulumi.interpolate`{
-                "rules": [{
-                    "rulePriority": 1,
-                    "description": "Keep last 3 images",
-                    "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 3 },
-                    "action": { "type": "expire" }
-                }]
-            }`,
-        });
-
-        repoUrls[`${svc.name}-nginx`] = repo.repositoryUrl;
+        repoUrls[`${stack}-${svc.name}-nginx-repo`] = nginxRepo.repositoryUrl;
 
     }
 
@@ -207,7 +193,6 @@ for (const svc of [...httpServices, ...workerServices]) {
 }
 
 /* Listener + Target Groups + ECS --------------------------------------- */
-
 const laravelAppKey = new random.RandomPassword("app-key", {
     length: 32,
     special: false,
@@ -226,7 +211,7 @@ const cluster = new aws.ecs.Cluster(`${stack}-cluster`);
 
 httpServices.forEach((svc, idx) => {
 
-    const targetPort = svc.nginxSidecarImage ? 80 : svc.port;
+    const targetPort = svc.nginxSidecarImageRepo ? 80 : svc.port;
     const tg = createTgAndRule({
         albArn: alb.loadBalancer.arn,
         listenerArn: listener,
@@ -240,6 +225,21 @@ httpServices.forEach((svc, idx) => {
         policies: svc.policies,
     });
 
+    const env: Record<string, pulumi.Input<string>> = {
+        APP_NAME: svc.envName,
+        APP_ENV: "staging",
+        APP_DEBUG: "false",
+        APP_URL: "https://stg.valornetvets.com",
+        QUEUE_CONNECTION: "sqs",
+        REDIS_CLIENT: "phpredis",
+        REDIS_HOST: redis.cacheNodes.apply(nodes => nodes[0].address),
+        REDIS_PORT: "6379",
+        AWS_ACCOUNT_ID: accountId,
+        AWS_DEFAULT_REGION: aws.config.requireRegion(),
+        SQS_PREFIX: pulumi.interpolate`https://sqs.${aws.config.region}.amazonaws.com/${accountId}`,
+        SQS_QUEUE: stagingQueue.id,
+    }
+
     const secrets: Record<string, aws.secretsmanager.Secret> = {
         APP_KEY: appKeySecret,
     };
@@ -249,40 +249,66 @@ httpServices.forEach((svc, idx) => {
         secrets.OAUTH_PUBLIC_KEY = jwtPubSecret;
     }
 
-
+    if(svc.path !== 'auth'){
+        env.AUTH_SERVICE_JWKS_URL = pulumi.interpolate`http://auth-service.${stack}.local/auth/v1/.well-known/jwks.json`
+    }
 
     makeHttpFargate({
-        svc: { name: svc.name, image: svc.image, port: svc.port },
+        svc: { name: svc.name, imageRepo: svc.imageRepo, port: svc.port },
         clusterArn: cluster.arn,
         tg,
         sgIds: [sgTasks.id],
         subnets: vpc.privateSubnetIds,
         taskRole,
-        env: {
-            APP_NAME: "AuthService",
-            APP_ENV: "staging",
-            APP_DEBUG: "false",
-            APP_URL: "https://stg.valornetvets.com",
-            QUEUE_CONNECTION: "sqs",
-            REDIS_CLIENT: "phpredis",
-            REDIS_HOST: redis.cacheNodes.apply(nodes => nodes[0].address),
-            REDIS_PORT: "6379",
-            AWS_DEFAULT_REGION: aws.config.requireRegion(),
-        },
+        env,
         secrets,
-        nginxSidecarImage: svc.nginxSidecarImage
+        nginxSidecarImageRepo: svc.nginxSidecarImageRepo,
+        serviceDiscovery: svc.path === 'auth' ? createSdService(svc.name, privateDnsNs) : undefined
     })
 
 });
 
-workerServices.forEach(w =>
+workerServices.forEach(w => {
+
+    const taskRole = createEcsTaskRole({
+        name: `${stack}-${w.name}`,
+        policies: w.policies,
+    });
+
+    const secrets: Record<string, aws.secretsmanager.Secret> = {
+        APP_KEY: appKeySecret,
+    };
+
+    const env: Record<string, pulumi.Input<string>> = {
+        APP_NAME: w.envName,
+        APP_ENV: "staging",
+        APP_DEBUG: "false",
+        APP_URL: "https://stg.valornetvets.com",
+        QUEUE_CONNECTION: "sqs",
+        REDIS_CLIENT: "phpredis",
+        REDIS_HOST: redis.cacheNodes.apply(nodes => nodes[0].address),
+        REDIS_PORT: "6379",
+        AWS_ACCOUNT_ID: accountId,
+        AWS_DEFAULT_REGION: aws.config.requireRegion(),
+        SQS_PREFIX: pulumi.interpolate`https://sqs.${aws.config.region}.amazonaws.com/${accountId}`,
+        SQS_QUEUE: stagingQueue.name,
+    }
+
+    if(w.path !== 'auth'){
+        env.AUTH_SERVICE_JWKS_URL = pulumi.interpolate`http://auth-service.${stack}.local/auth/v1/.well-known/jwks.json`
+    }
+
     makeWorkerFargate({
-        svc: { name: w.name, image: w.image, command: w.command },
+        svc: { name: w.name, imageRepo: w.imageRepo, command: w.command },
         clusterArn: cluster.arn,
         sgIds: [sgTasks.id],
         subnets: vpc.privateSubnetIds,
+        taskRole,
+        env,
+        secrets,
     })
-);
+
+});
 
 /* API Gateway ----------------------------------------------------------- */
 const httpApi = createHttpApi(`${stack}-api`);

@@ -1,0 +1,168 @@
+name: Update Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Tag da imagem Docker'
+        required: true
+      service_name:
+        description: 'Nome do serviço ECS'
+        required: true
+      environment:
+        description: 'Ambiente (staging/production)'
+        required: true
+        default: 'staging'
+      commit_sha:
+        description: 'SHA do commit da aplicação'
+        required: false
+      app_repo:
+        description: 'Repositório da aplicação'
+        required: false
+      ecr_repository:
+        description: 'Nome do repositório ECR'
+        required: true
+      ecr_nginx_repository:
+        description: 'Nome do repositório ECR do nginx'
+        required: false
+
+
+jobs:
+  update-infrastructure:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+      - name: Checkout infrastructure code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Install Pulumi CLI
+        uses: pulumi/actions@v4
+
+      - name: Verify image exists in ECR
+        run: |
+          echo "🔍 Verificando se a imagem existe no ECR..."
+          
+          # Verificar se a imagem principal existe
+          aws ecr describe-images \
+            --repository-name ${{ github.event.inputs.ecr_repository }} \
+            --image-ids imageTag=${{ github.event.inputs.image_tag }} \
+            --region ${{ secrets.AWS_REGION }} > /dev/null
+          
+          echo "✅ Imagem principal encontrada no ECR"
+          
+          # Verificar se a imagem nginx existe (se aplicável)
+          if [ -n "${{ github.event.inputs.ecr_nginx_repository }}" ]; then
+            aws ecr describe-images \
+              --repository-name ${{ github.event.inputs.ecr_nginx_repository }} \
+              --image-ids imageTag=${{ github.event.inputs.image_tag }} \
+              --region ${{ secrets.AWS_REGION }} > /dev/null
+            echo "✅ Imagem nginx encontrada no ECR"
+          fi
+
+      - name: Update infrastructure
+        env:
+          AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION:           ${{ secrets.AWS_REGION }}
+          PULUMI_BACKEND_URL:   "s3://meu-pulumi-state-bucket"
+          IMAGE_TAG: ${{ github.event.inputs.image_tag }}
+        run: |
+          echo "🔄 Atualizando infraestrutura para tag: $IMAGE_TAG"
+          echo "📍 Environment: ${{ github.event.inputs.environment }}"
+          echo "🏷️ Service: ${{ github.event.inputs.service_name }}"
+          
+          # Selecionar o stack correto
+          pulumi stack select ${{ github.event.inputs.environment }}
+          
+          # Mostrar o preview primeiro
+          echo "📋 Preview das mudanças:"
+          pulumi preview
+          
+          # Executar pulumi up com a nova tag
+          pulumi up --yes --suppress-outputs
+          
+          echo "✅ Infraestrutura atualizada com sucesso"
+
+      - name: Verify ECS update
+        run: |
+          echo "🔍 Verificando se o ECS foi atualizado..."
+          
+          # Aguardar um pouco para as mudanças se propagarem
+          sleep 10
+          
+          # Verificar se o serviço tem a nova task definition
+          SERVICE_INFO=$(aws ecs describe-services \
+            --cluster ${{ secrets.ECS_CLUSTER }} \
+            --services ${{ github.event.inputs.service_name }} \
+            --region ${{ secrets.AWS_REGION }})
+          
+          TASK_DEF_ARN=$(echo $SERVICE_INFO | jq -r '.services[0].taskDefinition')
+          echo "📋 Task Definition atual: $TASK_DEF_ARN"
+          
+          # Verificar se a task definition contém nossa imagem
+          TASK_DEF_DETAIL=$(aws ecs describe-task-definition \
+            --task-definition $TASK_DEF_ARN \
+            --region ${{ secrets.AWS_REGION }})
+          
+          # Procurar nossa tag nas imagens da task definition
+          HAS_NEW_TAG=$(echo $TASK_DEF_DETAIL | jq -r --arg TAG "${{ github.event.inputs.image_tag }}" '
+            .taskDefinition.containerDefinitions[] | 
+            select(.image | contains($TAG)) | 
+            .image
+          ')
+          
+          if [ -n "$HAS_NEW_TAG" ]; then
+            echo "✅ Task definition atualizada com nova imagem: $HAS_NEW_TAG"
+          else
+            echo "⚠️ Task definition pode não ter sido atualizada com a nova tag"
+            echo "Imagens atuais na task definition:"
+            echo $TASK_DEF_DETAIL | jq -r '.taskDefinition.containerDefinitions[].image'
+          fi
+
+      - name: Output deployment summary
+        if: always()
+        run: |
+          echo "### 🏗️ Infrastructure Update Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** \`${{ github.event.inputs.environment }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Service:** \`${{ github.event.inputs.service_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag:** \`${{ github.event.inputs.image_tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **App Repo:** \`${{ github.event.inputs.app_repo }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit SHA:** \`${{ github.event.inputs.commit_sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** ✅ Success" >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Resources Updated" >> $GITHUB_STEP_SUMMARY
+          echo "- ECS Task Definition updated with new image tags" >> $GITHUB_STEP_SUMMARY
+          echo "- ECS Service deployment triggered" >> $GITHUB_STEP_SUMMARY
+          
+      - name: Handle failure
+        if: failure()
+        run: |
+          echo "❌ Falha na atualização da infraestrutura!"
+          
+          echo "### ❌ Infrastructure Update Failed" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** \`${{ github.event.inputs.environment }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag:** \`${{ github.event.inputs.image_tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** ❌ Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Troubleshooting:**" >> $GITHUB_STEP_SUMMARY
+          echo "1. Check if images exist in ECR" >> $GITHUB_STEP_SUMMARY
+          echo "2. Verify Pulumi stack configuration" >> $GITHUB_STEP_SUMMARY
+          echo "3. Check AWS credentials and permissions" >> $GITHUB_STEP_SUMMARY

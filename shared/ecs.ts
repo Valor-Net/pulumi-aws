@@ -1,4 +1,5 @@
 import * as aws from "@pulumi/aws";
+import { PrivateDnsNamespace } from "@pulumi/aws/servicediscovery";
 import * as awsx from "@pulumi/awsx";
 import * as pulumi from "@pulumi/pulumi";
 
@@ -8,8 +9,18 @@ interface TaskRoleOptions {
     inlinePolicies?: aws.iam.RolePolicyArgs[];
 }
 
+function getImageTag(): string {
+    return process.env.IMAGE_TAG || 'latest';
+}
+
+function buildImageUrl(repo: string): string {
+    const registry = "331240720676.dkr.ecr.us-east-1.amazonaws.com";
+    const tag = getImageTag();
+    return `${registry}/${repo}:${tag}`;
+}
+
 export function makeHttpFargate(args: {
-    svc: { name: string; image: string, port: number };
+    svc: { name: string; imageRepo: string, port: number };
     clusterArn: pulumi.Input<string>;
     tg: aws.lb.TargetGroup;
     sgIds: pulumi.Input<string>[];
@@ -19,17 +30,19 @@ export function makeHttpFargate(args: {
     executionRole?: aws.iam.Role;
     env?: Record<string, pulumi.Input<string>>;
     secrets?: Record<string, aws.secretsmanager.Secret>;
-    nginxSidecarImage?: string;
+    nginxSidecarImageRepo?: string;
+    serviceDiscovery?: aws.servicediscovery.Service;
 }) {
     const execRole = args.executionRole || createEcsExecutionRole(`${args.svc.name}-execution`);
 
-    const phpContainerName = args.nginxSidecarImage ? "php" : "web";
+
+    const phpContainerName = args.nginxSidecarImageRepo ? "php" : "web";
     const phpContainer = {
         name: args.svc.name,
-        image: args.svc.image,
+        image: buildImageUrl(args.svc.imageRepo),
         cpu: 256,
         memory: 512,
-        portMappings: args.nginxSidecarImage
+        portMappings: args.nginxSidecarImageRepo
             ? undefined
             : [{
                 containerPort: args.svc.port,
@@ -59,10 +72,10 @@ export function makeHttpFargate(args: {
         [phpContainerName]: phpContainer,
     };
 
-    if (args.nginxSidecarImage) {
+    if (args.nginxSidecarImageRepo) {
         containers["web"] = {
             name: "web",
-            image: args.nginxSidecarImage,
+            image: buildImageUrl(args.nginxSidecarImageRepo),
             cpu: 128,
             memory: 128,
             portMappings: [{ containerPort: 80, hostPort: 80, targetGroup: args.tg }],
@@ -83,6 +96,10 @@ export function makeHttpFargate(args: {
         forceNewDeployment: true,
         cluster: args.clusterArn,
         desiredCount: 1,
+        serviceRegistries: args.serviceDiscovery ? {
+            registryArn: args.serviceDiscovery.arn,
+            containerName: args.nginxSidecarImageRepo ? "web" : args.svc.name,
+        } : undefined,
         taskDefinitionArgs: {
             taskRole: { roleArn: args.taskRole.arn },
             executionRole: { roleArn: execRole.arn },
@@ -97,7 +114,7 @@ export function makeHttpFargate(args: {
 }
 
 export function makeWorkerFargate(args: {
-    svc: { name: string; image: string; command: pulumi.Input<string>[]; cpu?: number; memory?: number };
+    svc: { name: string; imageRepo: string; command: pulumi.Input<string>[]; cpu?: number; memory?: number };
     clusterArn: pulumi.Input<string>;
     sgIds: pulumi.Input<string>[];
     subnets: pulumi.Input<pulumi.Input<string>[]>;
@@ -106,6 +123,7 @@ export function makeWorkerFargate(args: {
     executionRole?: aws.iam.Role;
     env?: Record<string, pulumi.Input<string>>;
     secrets?: Record<string, aws.secretsmanager.Secret>;
+    serviceDiscovery?: aws.servicediscovery.Service;
 }) {
     const execRole = args.executionRole || createEcsExecutionRole(`${args.svc.name}-execution`);
     const tRole = args.taskRole || createEcsTaskRole({
@@ -113,16 +131,22 @@ export function makeWorkerFargate(args: {
         policies: []
     });
 
+  
+
     return new awsx.ecs.FargateService(`${args.svc.name}-worker`, {
         cluster: args.clusterArn,
         desiredCount: 1,
+        serviceRegistries: args.serviceDiscovery ? {
+            registryArn: args.serviceDiscovery.arn,
+            containerName: args.svc.name
+        } : undefined,
         taskDefinitionArgs: {
             taskRole: { roleArn: tRole.arn },
             executionRole: { roleArn: execRole.arn },
             containers: {
                 worker: {
                     name: args.svc.name,
-                    image: args.svc.image,
+                    image: buildImageUrl(args.svc.imageRepo),
                     cpu: args.svc.cpu ?? 256,
                     memory: args.svc.memory ?? 512,
                     command: args.svc.command,
@@ -209,3 +233,15 @@ export function createEcsExecutionRole(name: string): aws.iam.Role {
 
     return role;
 }
+
+export function createSdService(name: string, ns: PrivateDnsNamespace) {
+    return new aws.servicediscovery.Service(`${name}-sd`, {
+      name,
+      dnsConfig: {
+        namespaceId: ns.id,
+        dnsRecords: [{ ttl: 10, type: "A" }],
+      },
+      healthCheckCustomConfig: { failureThreshold: 1 },
+    });
+  }
+  
