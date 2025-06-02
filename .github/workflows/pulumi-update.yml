@@ -25,6 +25,9 @@ on:
       ecr_nginx_repository:
         description: 'Nome do repositório ECR do nginx'
         required: false
+      service_urn:
+        description: 'URN do serviço ECS'
+        required: true
 
 
 jobs:
@@ -106,7 +109,7 @@ jobs:
           pulumi preview
           
           # Executar pulumi up com a nova tag
-          pulumi up --yes --suppress-outputs
+          pulumi up --yes --suppress-outputs --target ${{ github.event.inputs.service_urn }}
           
           echo "✅ Infraestrutura atualizada com sucesso"
 
