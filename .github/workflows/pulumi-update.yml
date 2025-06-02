@@ -91,6 +91,8 @@ jobs:
           PULUMI_BACKEND_URL:   ${{ secrets.PULUMI_BACKEND_URL }}
           PULUMI_CONFIG_PASSPHRASE:   ""
           IMAGE_TAG: ${{ github.event.inputs.image_tag }}
+          OAUTH_PRIVATE_KEY: ${{ secrets.OAUTH_PRIVATE_KEY }}
+          OAUTH_PUBLIC_KEY: ${{ secrets.OAUTH_PUBLIC_KEY }}
         run: |
           echo "🔄 Atualizando infraestrutura para tag: $IMAGE_TAG"
           echo "📍 Environment: ${{ github.event.inputs.environment }}"
