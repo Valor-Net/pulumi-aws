@@ -36,20 +36,19 @@ jobs:
       - name: Checkout infrastructure code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js (e habilita o Corepack para pnpm)
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
-
-      - name: Install pnpm
-        run: npm install -g pnpm
+          cache: 'pnpm'
+      - run: corepack enable
 
       - name: Install dependencies via pnpm
         run: pnpm install --frozen-lockfile
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
+        
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
