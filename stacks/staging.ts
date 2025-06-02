@@ -12,13 +12,12 @@ import {
 } from "../shared/apiGateway";
 
 import * as random from "@pulumi/random";
-import * as fs from "fs";
 import { createBastionHost } from "../shared/bastion";
 import { createEcrRepo } from "../shared/ecr";
 import { createEcsTaskRole, createSdService, makeHttpFargate, makeWorkerFargate } from "../shared/ecs";
 import { createRedisCluster } from "../shared/elastiCache";
 import { createRdsInstance } from "../shared/rds";
-import { createJsonSecret, ensureJsonSecretWithDefault, ensureTextSecret, getSecretString } from "../shared/secrets";
+import { createJsonSecret, ensureJsonSecretWithDefault, ensureTextSecret, getKeyFromSecretsOrFile, getSecretString } from "../shared/secrets";
 import { createSecurityGroup } from "../shared/securityGroups";
 import { createQueue } from "../shared/sqs";
 import { createVpc, createVpcInterfaceEndpoint } from "../shared/vpc";
@@ -200,8 +199,8 @@ const laravelAppKey = new random.RandomPassword("app-key", {
 }).result.apply(p => Buffer.from(p, "utf8").toString("base64"));
 const appKeySecret = ensureTextSecret(`${stack}-laravel-app-key`, laravelAppKey);
 
-const privateKey = fs.readFileSync("./.keys/staging/oauth-private.key", "utf8");
-const publicKey = fs.readFileSync("./.keys/staging/oauth-public.key", "utf8");
+const privateKey = getKeyFromSecretsOrFile("OAUTH_PRIVATE_KEY", "./.keys/staging/oauth-private.key");
+const publicKey = getKeyFromSecretsOrFile("OAUTH_PUBLIC_KEY", "./.keys/staging/oauth-public.key");
 
 const jwtPrivSecret = ensureTextSecret(`${stack}-jwt-private`, privateKey);
 const jwtPubSecret = ensureTextSecret(`${stack}-jwt-public`, publicKey);

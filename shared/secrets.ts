@@ -1,6 +1,7 @@
 // secrets.ts
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
+import * as fs from "fs";
 
 export function ensureJsonSecretWithDefault(
     logicalName: string,
@@ -75,3 +76,16 @@ export function ensureTextSecret(name: string, value: pulumi.Input<string>) {
     });
     return secret;
 }
+
+export function getKeyFromSecretsOrFile(secretName: string, filePath: string): string {
+    const envValue = process.env[secretName];
+    if (envValue) {
+        return envValue;
+    }
+    
+    try {
+        return fs.readFileSync(filePath, "utf8");
+    } catch (error) {
+        throw new Error(`${secretName} environment variable is required for CI/CD or ${filePath} file for local development`);
+    }
+};
