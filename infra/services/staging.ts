@@ -3,19 +3,21 @@ import * as pulumi from "@pulumi/pulumi";
 import * as random from "@pulumi/random";
 
 import { frontendServices, httpServices, workerServices } from "../servicesConfig";
+import { createTgAndRule } from "../shared/alb";
+import { createAlbIntegration, createApiMapping, createDomainName, createHttpApi, createRoute, createStage } from "../shared/apiGateway";
 import { createEcrRepo } from "../shared/ecr";
+import { createEcsTaskRole, createSdService, makeHttpFargate, makeWorkerFargate } from "../shared/ecs";
 import {
     ensureTextSecret,
     getKeyFromSecretsOrFile
 } from "../shared/secrets";
+import { createVpcLink } from "../shared/vpcLink";
 
 /* Config -------------------------------------------------- */
 const stack                 = pulumi.getStack();
-const caller                = aws.getCallerIdentity({});
-const accountId             = caller.then(c => c.accountId);
 const certArn               = "arn:aws:acm:us-east-1:331240720676:certificate/f5811ee2-2f5e-4424-a216-5c2a794e78c3";
-const core                  = new pulumi.StackReference("valornet-infra/staging-core");
-const config                = new pulumi.Config("valornet-infra-services");
+const core                  = new pulumi.StackReference("staging-core");
+const config                = new pulumi.Config("valornet-infra");
 const vpcId                 = core.getOutput("vpcId");
 const privateSubnetIds      = core.getOutput("privateSubnetIds");
 const publicSubnetIds       = core.getOutput("publicSubnetIds");
@@ -32,7 +34,8 @@ const frontendListenerArn   = core.getOutput("frontendListenerArn");
 const generalSecret         = pulumi.output(generalSecretArn).apply(arn => 
     aws.secretsmanager.Secret.get("general-secret", arn)
 );
-
+const caller                = aws.getCallerIdentity({});
+const accountId             = caller.then(c => c.accountId);
 /* ECS Cluster -------------------------------------------------- */
 const cluster = new aws.ecs.Cluster(`${stack}-cluster`, {
     name: `${stack}-cluster`,
@@ -41,11 +44,9 @@ const cluster = new aws.ecs.Cluster(`${stack}-cluster`, {
 /* ECR repos -------------------------------------------------- */
 const repoUrls: Record<string, pulumi.Output<string>> = {};
 for (const svc of [...httpServices, ...workerServices, ...frontendServices]) {
-    // Ex.: "staging-auth-service-repo"
     const repo = createEcrRepo(`${stack}-${svc.name}-repo`, stack, svc);
     repoUrls[svc.name] = repo.repositoryUrl;
 
-    // Se houver imagem nginx sidecar:
     if (svc.nginxSidecarImageRepo) {
         const nginxRepo = createEcrRepo(
             `${stack}-${svc.name}-nginx-repo`,
@@ -71,10 +72,9 @@ const publicKey = getKeyFromSecretsOrFile("OAUTH_PUBLIC_KEY", "./.keys/staging/o
 const jwtPrivSecret = ensureTextSecret(`${stack}-jwt-private`, privateKey);
 const jwtPubSecret = ensureTextSecret(`${stack}-jwt-public`, publicKey);
 
-/*
 httpServices.forEach((svc, idx) => {
 
-    const imageTag = config.require(`${svc.name}:imageTag`);
+    const imageTag = config.require(`${svc.name}.imageTag`);
    
     const targetPort = svc.nginxSidecarImageRepo ? 80 : svc.port;
     const tg = createTgAndRule({
@@ -117,6 +117,14 @@ httpServices.forEach((svc, idx) => {
     if(svc.path !== 'auth'){
         env.AUTH_SERVICE_JWKS_URL = pulumi.interpolate`http://auth-service.${stack}.local/auth/v1/.well-known/jwks.json`
     }
+
+    const serviceDiscovery = svc.path === 'auth' 
+        ? (() => {
+            console.log(`🔍 Criando Service Discovery para auth service`);
+            console.log(`🔍 privDnsNsId:`, privDnsNsId);
+            return createSdService(`${stack}-${svc.name}`, privDnsNsId);
+          })()
+        : undefined;
   
     makeHttpFargate({
         svc: { name: svc.name, imageRepo: svc.imageRepo, imageTag: imageTag, port: svc.port },
@@ -128,14 +136,15 @@ httpServices.forEach((svc, idx) => {
         env,
         secrets,
         nginxSidecarImageRepo: svc.nginxSidecarImageRepo,
-        serviceDiscovery: svc.path === 'auth' ? createSdService(svc.name, privDnsNsId) : undefined
+        serviceDiscovery: serviceDiscovery
     });
 
     const httpApi = createHttpApi(`${stack}-${svc.name}-api`);
-    const vpcLink = createVpcLink(`${stack}-${svc.name}-vpclink`, privateSubnetIds);
-    const albInt = pulumi.all([albArn, listenerArn]).apply(([aArn, lArn]) =>
-        createAlbIntegration(`${stack}-${svc.name}-alb-int`, httpApi.id, vpcLink.id, lArn)
+    const vpcLink = createVpcLink(`${stack}-${svc.name}-vpclink`, privateSubnetIds.apply(ids => ids));
+    const albInt = pulumi.all([albArn, listenerArn, vpcLink]).apply(([aArn, lArn, vLink]) =>
+        createAlbIntegration(`${stack}-${svc.name}-alb-int`, httpApi.id, vLink.id, lArn)
     );
+
     createRoute(
         `${svc.name}-route`,
         httpApi.id,
@@ -152,7 +161,7 @@ httpServices.forEach((svc, idx) => {
 });
 
 workerServices.forEach((wsvc) => {
-    const imageTag = config.require(`${wsvc.name}:imageTag`);
+    const imageTag = config.require(`${wsvc.name}.imageTag`);
 
     const taskRole = createEcsTaskRole({
         name:     `${stack}-${wsvc.name}`,
@@ -200,54 +209,53 @@ workerServices.forEach((wsvc) => {
     });
 });
 
-frontendServices.forEach((svc, idx) => {
-    const imageTag = config.require(`${svc.name}:imageTag`);
+// frontendServices.forEach((svc, idx) => {
+//     const imageTag = config.require(`${svc.name}.imageTag`);
 
-    const hostHeaders = svc.supportedTenants.map((t) => t.subdomain);
-    const frontendTg = createFrontendTgAndRule({
-        albArn:      frontendAlbArn.apply(a => a),
-        listenerArn: frontendListenerArn.apply(l => l),
-        svc:         { name: svc.name, port: svc.port },
-        vpcId:       vpcId.apply(v => v),
-        priority:    10 + idx,
-        hostHeaders,
-    });
+//     const hostHeaders = svc.supportedTenants.map((t) => t.subdomain);
+//     const frontendTg = createFrontendTgAndRule({
+//         albArn:      frontendAlbArn.apply(a => a),
+//         listenerArn: frontendListenerArn.apply(l => l),
+//         svc:         { name: svc.name, port: svc.port },
+//         vpcId:       vpcId.apply(v => v),
+//         priority:    10 + idx,
+//         hostHeaders,
+//     });
 
-    const taskRole = createEcsTaskRole({
-        name:     `${stack}-${svc.name}`,
-        policies: svc.policies || [],
-    });
+//     const taskRole = createEcsTaskRole({
+//         name:     `${stack}-${svc.name}`,
+//         policies: svc.policies || [],
+//     });
 
-    const env: Record<string, pulumi.Input<string>> = {
-        NODE_ENV:          "staging",
-        PORT:              svc.port.toString(),
-        API_ENDPOINT:      "https://stg.valornetvets.com",
-        SUPPORTED_TENANTS: JSON.stringify(svc.supportedTenants.map((t) => t.tenant)),
-    };
+//     const env: Record<string, pulumi.Input<string>> = {
+//         NODE_ENV:          "staging",
+//         PORT:              svc.port.toString(),
+//         API_ENDPOINT:      "https://stg.valornetvets.com",
+//         SUPPORTED_TENANTS: JSON.stringify(svc.supportedTenants.map((t) => t.tenant)),
+//     };
 
-    const secrets: Record<string, any> = {
-        CLIENTS_LIST: generalSecret,
-    };
+//     const secrets: Record<string, any> = {
+//         CLIENTS_LIST: generalSecret,
+//     };
 
-    svc.supportedTenants.forEach((t) => {
-        secrets[`${t.tenant.toUpperCase()}_CONFIG`] = getTenantSecret(stack, t.tenant);
-    });
+//     svc.supportedTenants.forEach((t) => {
+//         secrets[`${t.tenant.toUpperCase()}_CONFIG`] = getTenantSecret(stack, t.tenant);
+//     });
 
-    makeHttpFargate({
-        svc: {
-            name:         svc.name,
-            imageRepo:    svc.imageRepo,
-            imageTag:     imageTag,
-            port:         svc.port,
-        },
-        clusterArn:    cluster.arn,
-        tg:            frontendTg,
-        sgIds:         [sgFrontendId],
-        subnets:       publicSubnetIds,
-        taskRole,
-        env,
-        secrets,
-        assignPublicIp: true,
-    });
-});
-*/
+//     makeHttpFargate({
+//         svc: {
+//             name:         svc.name,
+//             imageRepo:    svc.imageRepo,
+//             imageTag:     imageTag,
+//             port:         svc.port,
+//         },
+//         clusterArn:    cluster.arn,
+//         tg:            frontendTg,
+//         sgIds:         [sgFrontendId],
+//         subnets:       publicSubnetIds,
+//         taskRole,
+//         env,
+//         secrets,
+//         assignPublicIp: true,
+//     });
+// });

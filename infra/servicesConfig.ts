@@ -78,8 +78,8 @@ const httpServices: HttpSvc[] = [
         path: "auth",
         healthPath: "/health",
         port: 9000,
-        imageRepo: "staging-auth-service-repo",
-        nginxSidecarImageRepo: "staging-auth-service-nginx-repo",
+        imageRepo: "staging-services-auth-service-repo",
+        nginxSidecarImageRepo: "staging-services-auth-service-nginx-repo",
         tech: "laravel",
         policies: [
             aws.iam.ManagedPolicy.AmazonSQSFullAccess,
@@ -93,7 +93,7 @@ const workerServices: WorkerSvc[] = [
         name: "email-service",
         envName: "EmailWorker",
         path: "email",
-        imageRepo: "staging-email-service-repo",
+        imageRepo: "staging-services-email-service-repo",
         policies: [
             aws.iam.ManagedPolicy.AmazonSQSFullAccess,
             aws.iam.ManagedPolicy.SecretsManagerReadWrite,

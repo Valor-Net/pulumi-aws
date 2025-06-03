@@ -8,9 +8,10 @@ interface TaskRoleOptions {
     inlinePolicies?: aws.iam.RolePolicyArgs[];
 }
 
-function buildImageUrl(repo: string, imageTag: string): string {
-    const registry = "331240720676.dkr.ecr.us-east-1.amazonaws.com";
-    return `${registry}/${repo}:${imageTag}`;
+function buildImageUrl(repo: string, imageTag: string): pulumi.Output<string> {
+    const accountId = aws.getCallerIdentity().then(c => c.accountId);
+    const region = aws.config.region;
+    return pulumi.interpolate`${accountId}.dkr.ecr.${region}.amazonaws.com/${repo}:${imageTag}`;
 }
 
 export function makeHttpFargate(args: {
