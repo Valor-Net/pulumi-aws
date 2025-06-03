@@ -4,18 +4,15 @@ import * as random from "@pulumi/random";
 
 import { frontendServices, httpServices, workerServices } from "../servicesConfig";
 import { createTgAndRule } from "../shared/alb";
-import { createAlbIntegration, createApiMapping, createDomainName, createHttpApi, createRoute, createStage } from "../shared/apiGateway";
 import { createEcrRepo } from "../shared/ecr";
 import { createEcsTaskRole, createSdService, makeHttpFargate, makeWorkerFargate } from "../shared/ecs";
 import {
     ensureTextSecret,
     getKeyFromSecretsOrFile
 } from "../shared/secrets";
-import { createVpcLink } from "../shared/vpcLink";
 
 /* Config -------------------------------------------------- */
 const stack                 = pulumi.getStack();
-const certArn               = "arn:aws:acm:us-east-1:331240720676:certificate/f5811ee2-2f5e-4424-a216-5c2a794e78c3";
 const core                  = new pulumi.StackReference("staging-core");
 const config                = new pulumi.Config("valornet-infra");
 const vpcId                 = core.getOutput("vpcId");
@@ -29,13 +26,38 @@ const frontendAlbArn        = core.getOutput("frontendAlbArn");
 const redisEndpoint         = core.getOutput("redisEndpoint");
 const stagingQueueUrl       = core.getOutput("stagingQueueUrl");
 const generalSecretArn      = core.getOutput("generalSecretArn");
-const privDnsNsId           = core.getOutput("privDnsNsId");
 const frontendListenerArn   = core.getOutput("frontendListenerArn");
+const privDnsNsId           = core.getOutput("privDnsNsId");
 const generalSecret         = pulumi.output(generalSecretArn).apply(arn => 
     aws.secretsmanager.Secret.get("general-secret", arn)
 );
 const caller                = aws.getCallerIdentity({});
 const accountId             = caller.then(c => c.accountId);
+
+// Remove a criação duplicada do PrivateDnsNamespace
+// Vamos usar o que já existe no core stack via privDnsNsId
+
+/* Debug outputs -------------------------------------------------- */
+console.log("=== DEBUG VALORES DO CORE STACK ===");
+privDnsNsId.apply(id => {
+    console.log("privDnsNsId value:", id);
+    console.log("privDnsNsId type:", typeof id);
+    return id;
+});
+
+listenerArn.apply(arn => {
+    console.log("listenerArn value:", arn);
+    console.log("listenerArn type:", typeof arn);
+    console.log("listenerArn is defined:", !!arn);
+    return arn;
+});
+
+albArn.apply(arn => {
+    console.log("albArn value:", arn);
+    console.log("albArn type:", typeof arn);
+    return arn;
+});
+
 /* ECS Cluster -------------------------------------------------- */
 const cluster = new aws.ecs.Cluster(`${stack}-cluster`, {
     name: `${stack}-cluster`,
@@ -72,17 +94,42 @@ const publicKey = getKeyFromSecretsOrFile("OAUTH_PUBLIC_KEY", "./.keys/staging/o
 const jwtPrivSecret = ensureTextSecret(`${stack}-jwt-private`, privateKey);
 const jwtPubSecret = ensureTextSecret(`${stack}-jwt-public`, publicKey);
 
-httpServices.forEach((svc, idx) => {
+// Obter o namespace existente do core stack
+const existingNamespace = privDnsNsId.apply(id => 
+    aws.servicediscovery.PrivateDnsNamespace.get(`${stack}-existing-ns`, id)
+);
 
+httpServices.forEach((svc, idx) => {
     const imageTag = config.require(`${svc.name}.imageTag`);
    
     const targetPort = svc.nginxSidecarImageRepo ? 80 : svc.port;
-    const tg = createTgAndRule({
-        albArn:        albArn.apply(a => a),
-        listenerArn:   listenerArn.apply(l => l),
-        svc:           { ...svc, port: targetPort },
-        vpcId:         vpcId.apply(v => v),
-        priority:      10 + idx,
+    
+    // Criar target group e rule com verificações
+    const tg = pulumi.all([albArn, listenerArn, vpcId]).apply(([alb, listener, vpc]) => {
+        console.log(`=== Processing service ${svc.name} ===`);
+        console.log("ALB ARN:", alb);
+        console.log("Listener ARN:", listener);
+        console.log("VPC ID:", vpc);
+        
+        if (!listener) {
+            throw new Error(`listenerArn is undefined for service ${svc.name}. Check core stack outputs.`);
+        }
+        
+        if (!alb) {
+            throw new Error(`albArn is undefined for service ${svc.name}. Check core stack outputs.`);
+        }
+        
+        if (!vpc) {
+            throw new Error(`vpcId is undefined for service ${svc.name}. Check core stack outputs.`);
+        }
+
+        return createTgAndRule({
+            albArn: alb,
+            listenerArn: listener,
+            svc: { ...svc, port: targetPort },
+            vpcId: vpc,
+            priority: 10 + idx,
+        });
     });
 
     const taskRole = createEcsTaskRole({
@@ -118,46 +165,25 @@ httpServices.forEach((svc, idx) => {
         env.AUTH_SERVICE_JWKS_URL = pulumi.interpolate`http://auth-service.${stack}.local/auth/v1/.well-known/jwks.json`
     }
 
+    // Criar service discovery apenas para o auth service
     const serviceDiscovery = svc.path === 'auth' 
-        ? (() => {
-            console.log(`🔍 Criando Service Discovery para auth service`);
-            console.log(`🔍 privDnsNsId:`, privDnsNsId);
-            return createSdService(`${stack}-${svc.name}`, privDnsNsId);
-          })()
+        ? existingNamespace.apply(ns => createSdService(svc.name, ns))
         : undefined;
-  
-    makeHttpFargate({
-        svc: { name: svc.name, imageRepo: svc.imageRepo, imageTag: imageTag, port: svc.port },
-        clusterArn:    cluster.arn,
-        tg,
-        sgIds:         [sgTasksId],
-        subnets:       privateSubnetIds,
-        taskRole,
-        env,
-        secrets,
-        nginxSidecarImageRepo: svc.nginxSidecarImageRepo,
-        serviceDiscovery: serviceDiscovery
-    });
 
-    const httpApi = createHttpApi(`${stack}-${svc.name}-api`);
-    const vpcLink = createVpcLink(`${stack}-${svc.name}-vpclink`, privateSubnetIds.apply(ids => ids));
-    const albInt = pulumi.all([albArn, listenerArn, vpcLink]).apply(([aArn, lArn, vLink]) =>
-        createAlbIntegration(`${stack}-${svc.name}-alb-int`, httpApi.id, vLink.id, lArn)
+    pulumi.all([tg, cluster.arn]).apply(([targetGroup, clusterArn]) => 
+        makeHttpFargate({
+            svc: { name: svc.name, imageRepo: svc.imageRepo, imageTag: imageTag, port: svc.port },
+            clusterArn,
+            tg: targetGroup,
+            sgIds: [sgTasksId],
+            subnets: privateSubnetIds,
+            taskRole,
+            env,
+            secrets,
+            nginxSidecarImageRepo: svc.nginxSidecarImageRepo,
+            serviceDiscovery
+        })
     );
-
-    createRoute(
-        `${svc.name}-route`,
-        httpApi.id,
-        `ANY /${svc.path}/v1/{proxy+}`,
-        albInt.apply(i => i.id)
-    );
-    const stage = createStage("default", httpApi.id, "$default");
-    const domain = createDomainName(
-        `${svc.name}-domain`,
-        `${svc.path}.stg.valornetvets.com`,
-        certArn
-    );
-    createApiMapping(`map-${svc.name}`, httpApi.id, domain.id, stage.name, "");
 });
 
 workerServices.forEach((wsvc) => {
@@ -187,11 +213,9 @@ workerServices.forEach((wsvc) => {
         env["AUTH_SERVICE_JWKS_URL"] = pulumi.interpolate`http://auth-service.${stack}.local/auth/v1/.well-known/jwks.json`;
     }
 
-
     const secrets: Record<string, aws.secretsmanager.Secret> = {
         APP_KEY: appKeySecret,
     };
-
 
     makeWorkerFargate({
         svc: {
@@ -209,6 +233,7 @@ workerServices.forEach((wsvc) => {
     });
 });
 
+// Frontend services (comentado como no original)
 // frontendServices.forEach((svc, idx) => {
 //     const imageTag = config.require(`${svc.name}.imageTag`);
 
