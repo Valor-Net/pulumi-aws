@@ -1,6 +1,7 @@
-name: valornet-infra
+name: infra
 organization: valornet
 description: Valornet infrastructure
+main: index.ts
 runtime:
   name: nodejs
   options:

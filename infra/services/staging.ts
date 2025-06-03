@@ -1,3 +1,4 @@
+// infra/services/staging.ts
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import * as random from "@pulumi/random";
@@ -13,7 +14,7 @@ import {
 
 /* Config -------------------------------------------------- */
 const stack                 = pulumi.getStack();
-const core                  = new pulumi.StackReference("staging-core");
+const core                  = new pulumi.StackReference("organization/infra/staging-core");
 const config                = new pulumi.Config("valornet-infra");
 const vpcId                 = core.getOutput("vpcId");
 const privateSubnetIds      = core.getOutput("privateSubnetIds");
@@ -33,30 +34,6 @@ const generalSecret         = pulumi.output(generalSecretArn).apply(arn =>
 );
 const caller                = aws.getCallerIdentity({});
 const accountId             = caller.then(c => c.accountId);
-
-// Remove a criação duplicada do PrivateDnsNamespace
-// Vamos usar o que já existe no core stack via privDnsNsId
-
-/* Debug outputs -------------------------------------------------- */
-console.log("=== DEBUG VALORES DO CORE STACK ===");
-privDnsNsId.apply(id => {
-    console.log("privDnsNsId value:", id);
-    console.log("privDnsNsId type:", typeof id);
-    return id;
-});
-
-listenerArn.apply(arn => {
-    console.log("listenerArn value:", arn);
-    console.log("listenerArn type:", typeof arn);
-    console.log("listenerArn is defined:", !!arn);
-    return arn;
-});
-
-albArn.apply(arn => {
-    console.log("albArn value:", arn);
-    console.log("albArn type:", typeof arn);
-    return arn;
-});
 
 /* ECS Cluster -------------------------------------------------- */
 const cluster = new aws.ecs.Cluster(`${stack}-cluster`, {
@@ -86,50 +63,25 @@ const laravelAppKey = new random.RandomPassword("app-key", {
     overrideSpecial: "_-",
 }).result.apply(p => Buffer.from(p, "utf8").toString("base64"));
 
-const appKeySecret = ensureTextSecret(`${stack}-laravel-app-key`, laravelAppKey);
+const appKeySecret = ensureTextSecret(`${stack}-app-key`, laravelAppKey);
 
 const privateKey = getKeyFromSecretsOrFile("OAUTH_PRIVATE_KEY", "./.keys/staging/oauth-private.key");
 const publicKey = getKeyFromSecretsOrFile("OAUTH_PUBLIC_KEY", "./.keys/staging/oauth-public.key");
 
-const jwtPrivSecret = ensureTextSecret(`${stack}-jwt-private`, privateKey);
-const jwtPubSecret = ensureTextSecret(`${stack}-jwt-public`, publicKey);
-
-// Obter o namespace existente do core stack
-const existingNamespace = privDnsNsId.apply(id => 
-    aws.servicediscovery.PrivateDnsNamespace.get(`${stack}-existing-ns`, id)
-);
+const jwtPrivSecret = ensureTextSecret(`private-key-${stack}`, privateKey);
+const jwtPubSecret = ensureTextSecret(`public-key-${stack}`, publicKey);
 
 httpServices.forEach((svc, idx) => {
     const imageTag = config.require(`${svc.name}.imageTag`);
    
     const targetPort = svc.nginxSidecarImageRepo ? 80 : svc.port;
     
-    // Criar target group e rule com verificações
-    const tg = pulumi.all([albArn, listenerArn, vpcId]).apply(([alb, listener, vpc]) => {
-        console.log(`=== Processing service ${svc.name} ===`);
-        console.log("ALB ARN:", alb);
-        console.log("Listener ARN:", listener);
-        console.log("VPC ID:", vpc);
-        
-        if (!listener) {
-            throw new Error(`listenerArn is undefined for service ${svc.name}. Check core stack outputs.`);
-        }
-        
-        if (!alb) {
-            throw new Error(`albArn is undefined for service ${svc.name}. Check core stack outputs.`);
-        }
-        
-        if (!vpc) {
-            throw new Error(`vpcId is undefined for service ${svc.name}. Check core stack outputs.`);
-        }
-
-        return createTgAndRule({
-            albArn: alb,
-            listenerArn: listener,
-            svc: { ...svc, port: targetPort },
-            vpcId: vpc,
-            priority: 10 + idx,
-        });
+    const tg = createTgAndRule({
+        albArn: albArn,
+        listenerArn: listenerArn,
+        svc: { ...svc, port: targetPort },
+        vpcId: vpcId,
+        priority: 10 + idx,
     });
 
     const taskRole = createEcsTaskRole({
@@ -150,6 +102,7 @@ httpServices.forEach((svc, idx) => {
         AWS_DEFAULT_REGION:  aws.config.requireRegion(),
         SQS_PREFIX:          pulumi.interpolate`https://sqs.${aws.config.region}.amazonaws.com/${accountId}`,
         SQS_QUEUE:           stagingQueueUrl,
+        TENANT_SECRET_NAME:  "staging-core-secret",
     };
 
     const secrets: Record<string, aws.secretsmanager.Secret> = svc.tech === 'laravel' ? {
@@ -165,25 +118,22 @@ httpServices.forEach((svc, idx) => {
         env.AUTH_SERVICE_JWKS_URL = pulumi.interpolate`http://auth-service.${stack}.local/auth/v1/.well-known/jwks.json`
     }
 
-    // Criar service discovery apenas para o auth service
-    const serviceDiscovery = svc.path === 'auth' 
-        ? existingNamespace.apply(ns => createSdService(svc.name, ns))
-        : undefined;
+    const serviceDiscovery = svc.path === 'auth' ? createSdService(svc.name, privDnsNsId) : undefined
 
-    pulumi.all([tg, cluster.arn]).apply(([targetGroup, clusterArn]) => 
-        makeHttpFargate({
-            svc: { name: svc.name, imageRepo: svc.imageRepo, imageTag: imageTag, port: svc.port },
-            clusterArn,
-            tg: targetGroup,
-            sgIds: [sgTasksId],
-            subnets: privateSubnetIds,
-            taskRole,
-            env,
-            secrets,
-            nginxSidecarImageRepo: svc.nginxSidecarImageRepo,
-            serviceDiscovery
-        })
-    );
+    makeHttpFargate({
+        svc: { name: svc.name, imageRepo: svc.imageRepo, imageTag: imageTag, port: svc.port },
+        clusterArn: cluster.arn,
+        tg,
+        sgIds: [sgTasksId],
+        subnets: privateSubnetIds,
+        taskRole,
+        env,
+        secrets,
+        nginxSidecarImageRepo: svc.nginxSidecarImageRepo,
+        serviceDiscovery
+    })
+
+    
 });
 
 workerServices.forEach((wsvc) => {
@@ -284,3 +234,9 @@ workerServices.forEach((wsvc) => {
 //         assignPublicIp: true,
 //     });
 // });
+
+export function getExports() {
+    return {
+        services: true
+    };
+}

@@ -4,29 +4,33 @@ on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: 'Tag da imagem Docker'
+        description: 'Docker image tag'
         required: true
       service_name:
-        description: 'Nome do serviço ECS'
+        description: 'ECS service name'
         required: true
       environment:
-        description: 'Ambiente (staging/production)'
+        description: 'Environment (staging/production)'
         required: true
         default: 'staging'
+      stack:
+        description: 'Pulumi stack (staging-services/production-services)'
+        required: true
+        default: 'staging-services'
       commit_sha:
-        description: 'SHA do commit da aplicação'
+        description: 'commit SHA'
         required: false
       app_repo:
-        description: 'Repositório da aplicação'
+        description: 'APP repository'
         required: false
       ecr_repository:
-        description: 'Nome do repositório ECR'
+        description: 'ECR repository'
         required: true
       ecr_nginx_repository:
-        description: 'Nome do repositório ECR do nginx'
+        description: 'ECR nginx repository'
         required: false
       service_urn:
-        description: 'URN do serviço ECS'
+        description: 'ECS service URN'
         required: true
 
 
@@ -39,13 +43,12 @@ jobs:
       - name: Checkout infrastructure code
         uses: actions/checkout@v4
 
-      # 1) Instalar o pnpm usando a Action oficial:
       - name: Install pnpm via pnpm/action-setup
         uses: pnpm/action-setup@v4
         with:
           version: 'latest'
 
-      - name: Setup Node.js (com cache de pnpm)
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
@@ -102,7 +105,7 @@ jobs:
           echo "🏷️ Service: ${{ github.event.inputs.service_name }}"
           
           # Selecionar o stack correto
-          pulumi stack select ${{ github.event.inputs.environment }}
+          pulumi stack select ${{ github.event.inputs.stack }}
           
           # Mostrar o preview primeiro
           echo "📋 Preview das mudanças:"

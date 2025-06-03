@@ -2,18 +2,26 @@ import * as pulumi from "@pulumi/pulumi";
 
 const stack = pulumi.getStack();
 
-const stackMap: Record<string, () => void> = {
-    "dev-core":        () => require("./dev.ts"),
-    "staging-core":    () => require("./staging.ts"),
-    "production-core": () => require("./production.ts"),
+const stackMap: Record<string, () => any> = {
+    "dev-core":        () => require("./dev"),
+    "staging-core":    () => require("./staging"),
+    "production-core": () => require("./production"),
 };
 
 const loader = stackMap[stack];
 if (!loader) {
     throw new Error(
         `Stack '${stack}' não reconhecida no módulo 'core'.\n` +
-        `Use exatamente um dos valores: 'dev-core', 'staging-core' ou 'production-core'.`
+        `Use exatamente um dos valores: ${Object.keys(stackMap).join(", ")}.`
     );
 }
 
-loader();
+const mod = loader();
+
+if (typeof mod.getExports !== "function") {
+    throw new Error(`Stack '${stack}' no módulo 'core' não implementa getExports().`);
+}
+
+const exportsObj = mod.getExports();
+
+Object.assign(exports, exportsObj);

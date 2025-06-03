@@ -51,7 +51,7 @@ const frontendServices: FrontendSvc[] = [
     {
         name: "valornet-frontend",
         envName: "ValornetFrontend", 
-        imageRepo: "staging-valornet-frontend-repo",
+        imageRepo: "staging-services-valornet-frontend-repo",
         port: 3000,
         tech: "nextjs",
         policies: [

@@ -150,20 +150,19 @@ const redis = createRedisCluster({
 });
 const initialTenants = ["demo"];
 const clientsSecret = createManagedSecret(
-    `${stack}-clients-secret`,
+    `tenants-${stack}-secret`,
     initialTenants,
     "Lista de tenants - gerenciado pelo TenantProviderService"
 );
 
 initialTenants.forEach(tenantName => {
-    const secretName = `${stack}-${tenantName}-secret`;
+    const secretName = `${tenantName}-${stack}-secret`;
 
     const customSettings = getTenantCustomSettings(tenantName);
     const finalSettings = Object.keys(customSettings).length > 0 
         ? customSettings 
         : {};
 
-    console.log(`🔑 Criando secret para tenant: ${tenantName}`);
     createManagedSecret(
         secretName,
         finalSettings,
@@ -180,7 +179,7 @@ const generalSecretData = pulumi.all([rds.endpoint, rds.port, dbPassword, bastio
     redisEndpoint: redisNode[0].address
 }));
 
-createJsonSecret(`${stack}-general-secret`, generalSecretData, `RDS connection details for ${stack}`);
+createJsonSecret(`data-${stack}-secret`, generalSecretData, `RDS connection details for ${stack}`);
 
 
 /* API Gateway ----------------------------------------------------------- */
@@ -208,29 +207,41 @@ const stage = createStage("default", httpApi.id, "$default");
 const domain = createDomainName("api-domain", "stg.valornetvets.com", certArn);
 createApiMapping("map", httpApi.id, domain.id, stage.name, "");
 
+/* Private DNS ------------------------------------------------------------ */
+
+const privateDnsNs = new aws.servicediscovery.PrivateDnsNamespace(`${stack}-services-ns`, {
+    name: `${stack}.local`,
+    vpc: vpc.vpc.id,
+    description: `Private DNS namespace for ${stack} services`,
+});
+
+
 /* Outputs --------------------------------------------------------------- */
-export const vpcId               = vpc.vpc.id;
-export const privateSubnetIds    = vpc.privateSubnetIds;
-export const publicSubnetIds     = vpc.publicSubnetIds;
-export const sgAlbId             = sgAlb.id;
-export const sgTasksId           = sgTasks.id;
-export const sgDbId              = sgDb.id;
-export const sgRedisId           = sgRedis.id;
-export const sgVpcEndpointsId    = sgVpcEndpoints.id;
-export const sgFrontendId        = sgFrontend.id;
-export const albArn              = alb.loadBalancer.arn;
-// export const frontendAlbArn      = frontendAlb.loadBalancer.arn;
-// export const frontendListenerArn = frontendAlb.listeners.apply(l => l![0].arn);
-export const listenerArn         = alb.listeners.apply(l => l![0].arn);
-export const rdsEndpoint         = rds.endpoint;
-export const rdsPort             = rds.port;
-export const rdsUsername         = `valornet`;
-export const rdsPassword         = pulumi.secret(dbPassword);
-export const redisEndpoint       = redis.cacheNodes.apply(nodes => nodes![0].address);
-export const vpceSecretsId       = vpceSecrets.id;
-export const vpceSecretsDns      = vpceSecrets.dnsEntries;
-export const vpceSqsId           = vpceSqs.id;
-export const vpceSqsDns          = vpceSqs.dnsEntries;
-export const stagingQueueUrl     = stagingQueue.id;
-export const generalSecretArn    = clientsSecret.arn;
-export const generalSecretJson   = clientsSecret;
+export function getExports() {
+    return {
+        vpcId: vpc.vpc.id,
+        privateSubnetIds: vpc.privateSubnetIds,
+        publicSubnetIds: vpc.publicSubnetIds,
+        sgAlbId: sgAlb.id,
+        sgTasksId: sgTasks.id,
+        sgDbId: sgDb.id,
+        sgRedisId: sgRedis.id,
+        sgVpcEndpointsId: sgVpcEndpoints.id,
+        sgFrontendId: sgFrontend.id,
+        albArn: alb.loadBalancer.arn,
+        listenerArn: alb.listeners.apply(l => l![0].arn),
+        rdsEndpoint: pulumi.unsecret(rds.endpoint),
+        rdsPort: pulumi.unsecret(rds.port),
+        rdsUsername: "valornet",
+        redisEndpoint: redis.cacheNodes.apply(nodes => pulumi.unsecret(pulumi.output(nodes![0].address))),
+        vpceSecretsId: vpceSecrets.id,
+        vpceSecretsDns: vpceSecrets.dnsEntries,
+        vpceSqsId: vpceSqs.id,
+        vpceSqsDns: vpceSqs.dnsEntries,
+        stagingQueueUrl: stagingQueue.id,
+        generalSecretArn: clientsSecret.arn,
+        privDnsNsId: privateDnsNs.id,
+        rdsPassword: pulumi.secret(dbPassword),
+        devQueueUrl: stagingQueue.id
+    };
+}

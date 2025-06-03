@@ -1,5 +1,4 @@
 import * as aws from "@pulumi/aws";
-import { PrivateDnsNamespace } from "@pulumi/aws/servicediscovery";
 import * as awsx from "@pulumi/awsx";
 import * as pulumi from "@pulumi/pulumi";
 
@@ -27,7 +26,7 @@ export function makeHttpFargate(args: {
     env?: Record<string, pulumi.Input<string>>;
     secrets?: Record<string, aws.secretsmanager.Secret>;
     nginxSidecarImageRepo?: string;
-    serviceDiscovery?: pulumi.Output<aws.servicediscovery.Service>;
+    serviceDiscovery?: aws.servicediscovery.Service;
 }) {
     const execRole = args.executionRole || createEcsExecutionRole(`${args.svc.name}-execution`);
 
@@ -229,11 +228,11 @@ export function createEcsExecutionRole(name: string): aws.iam.Role {
     return role;
 }
 
-export function createSdService(name: string, ns: PrivateDnsNamespace) {
+export function createSdService(name: string, nsId: pulumi.Input<string>) {
     return new aws.servicediscovery.Service(`${name}-sd`, {
       name,
       dnsConfig: {
-        namespaceId: ns.id,
+        namespaceId: nsId,
         dnsRecords: [{ ttl: 10, type: "A" }],
       },
       healthCheckCustomConfig: { failureThreshold: 1 },

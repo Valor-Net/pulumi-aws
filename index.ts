@@ -2,27 +2,24 @@ import * as pulumi from "@pulumi/pulumi";
 
 const stack = pulumi.getStack();
 
-const moduleMap: Record<string, () => void> = {
-    "core":     () => require("./infra/core/index.ts"),
-    "services": () => require("./infra/services/index.ts"),
+const stackMap: Record<string, () => any> = {
+    "staging-core":    () => require("./infra/core/staging"),
+    "staging-services": () => require("./infra/services/staging"),
+    "dev-core":        () => require("./infra/core/dev"),
+    "dev-services":    () => require("./infra/services/dev"),
+    "production-core": () => require("./infra/core/production"),
+    "production-services": () => require("./infra/services/production"),
 };
 
-const parts = stack.split("-");
-
-if (parts.length !== 2) {
-    throw new Error(
-        `Nome de stack inválido: '${stack}'. Deve estar no formato "<env>-<module>".\n` +
-        `Exemplos válidos: "dev-core", "staging-core", "production-core",\n` + `"dev-services", "staging-services", "production-services".`
-    );
-}
-
-const moduleSuffix = parts[1];
-
-const loader = moduleMap[moduleSuffix];
+const loader = stackMap[stack];
 if (!loader) {
-    throw new Error(
-        `Módulo '${moduleSuffix}' não reconhecido. Use "core" ou "services" como sufixo de stack.`
-    );
+    throw new Error(`Stack '${stack}' não reconhecida.`);
 }
 
-loader();
+const mod = loader();
+if (typeof mod.getExports !== "function") {
+    throw new Error(`Módulo da stack '${stack}' não possui função getExports().`);
+}
+const exportsObj = mod.getExports();
+
+Object.assign(exports, exportsObj);
