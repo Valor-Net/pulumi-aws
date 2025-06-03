@@ -4,12 +4,13 @@ import * as pulumi from "@pulumi/pulumi";
 import * as random from "@pulumi/random";
 
 import { frontendServices, httpServices, workerServices } from "../servicesConfig";
-import { createTgAndRule } from "../shared/alb";
+import { createFrontendTgAndRule, createTgAndRule } from "../shared/alb";
 import { createEcrRepo } from "../shared/ecr";
 import { createEcsTaskRole, createSdService, makeHttpFargate, makeWorkerFargate } from "../shared/ecs";
 import {
     ensureTextSecret,
-    getKeyFromSecretsOrFile
+    getKeyFromSecretsOrFile,
+    getTenantSecret
 } from "../shared/secrets";
 
 /* Config -------------------------------------------------- */
@@ -25,13 +26,11 @@ const listenerArn           = core.getOutput("listenerArn");
 const albArn                = core.getOutput("albArn");
 const frontendAlbArn        = core.getOutput("frontendAlbArn");
 const redisEndpoint         = core.getOutput("redisEndpoint");
-const stagingQueueUrl       = core.getOutput("stagingQueueUrl");
+const emailQueue        = core.getOutput("emailQueue");
 const generalSecretArn      = core.getOutput("generalSecretArn");
-const frontendListenerArn   = core.getOutput("frontendListenerArn");
+const frontendlistenerArn   = core.getOutput("frontendlistenerArn");
 const privDnsNsId           = core.getOutput("privDnsNsId");
-const generalSecret         = pulumi.output(generalSecretArn).apply(arn => 
-    aws.secretsmanager.Secret.get("general-secret", arn)
-);
+const generalSecret         = pulumi.output(generalSecretArn).apply(arn => aws.secretsmanager.Secret.get("general-secret", arn));
 const caller                = aws.getCallerIdentity({});
 const accountId             = caller.then(c => c.accountId);
 
@@ -101,7 +100,7 @@ httpServices.forEach((svc, idx) => {
         AWS_ACCOUNT_ID:      pulumi.interpolate`${accountId}`,
         AWS_DEFAULT_REGION:  aws.config.requireRegion(),
         SQS_PREFIX:          pulumi.interpolate`https://sqs.${aws.config.region}.amazonaws.com/${accountId}`,
-        SQS_QUEUE:           stagingQueueUrl,
+        SQS_QUEUE:           emailQueue,
         TENANT_SECRET_NAME:  "staging-core-secret",
     };
 
@@ -156,7 +155,7 @@ workerServices.forEach((wsvc) => {
         AWS_ACCOUNT_ID:      pulumi.interpolate`${accountId}`,
         AWS_DEFAULT_REGION:  aws.config.requireRegion(),
         SQS_PREFIX:          pulumi.interpolate`https://sqs.${aws.config.region}.amazonaws.com/${accountId}`,
-        SQS_QUEUE:           stagingQueueUrl,
+        SQS_QUEUE:           emailQueue,
     };
 
     if (wsvc.path !== "auth") {
@@ -183,57 +182,59 @@ workerServices.forEach((wsvc) => {
     });
 });
 
-// Frontend services (comentado como no original)
-// frontendServices.forEach((svc, idx) => {
-//     const imageTag = config.require(`${svc.name}.imageTag`);
+frontendServices.forEach((svc, idx) => {
+    const imageTag = config.require(`${svc.name}.imageTag`);
 
-//     const hostHeaders = svc.supportedTenants.map((t) => t.subdomain);
-//     const frontendTg = createFrontendTgAndRule({
-//         albArn:      frontendAlbArn.apply(a => a),
-//         listenerArn: frontendListenerArn.apply(l => l),
-//         svc:         { name: svc.name, port: svc.port },
-//         vpcId:       vpcId.apply(v => v),
-//         priority:    10 + idx,
-//         hostHeaders,
-//     });
+    const hostHeaders = svc.supportedTenants.map((t) => t.subdomain);
+    const frontendTg = createFrontendTgAndRule({
+        albArn:      frontendAlbArn,
+        listenerArn: frontendlistenerArn,
+        svc:         { name: svc.name, port: svc.port },
+        vpcId:       vpcId,
+        priority:    10 + idx,
+        hostHeaders,
+    });
 
-//     const taskRole = createEcsTaskRole({
-//         name:     `${stack}-${svc.name}`,
-//         policies: svc.policies || [],
-//     });
+    const taskRole = createEcsTaskRole({
+        name:     `${stack}-${svc.name}`,
+        policies: svc.policies || [],
+    });
 
-//     const env: Record<string, pulumi.Input<string>> = {
-//         NODE_ENV:          "staging",
-//         PORT:              svc.port.toString(),
-//         API_ENDPOINT:      "https://stg.valornetvets.com",
-//         SUPPORTED_TENANTS: JSON.stringify(svc.supportedTenants.map((t) => t.tenant)),
-//     };
+    const env: Record<string, pulumi.Input<string>> = {
+        NODE_ENV:                      "staging",
+        NEXT_PUBLIC_BASE_URL:          `https://${svc.supportedTenants[0].subdomain}`,
+        NEXT_PUBLIC_PROJECT_NAME:      "Admin Panel",
+        PORT:                          svc.port.toString(),
+        API_ENDPOINT:                  "https://stg.valornetvets.com",
+        SUPPORTED_TENANTS:             JSON.stringify(svc.supportedTenants.map((t) => t.tenant)),
+        TENANT:                        "demo"
+    };
 
-//     const secrets: Record<string, any> = {
-//         CLIENTS_LIST: generalSecret,
-//     };
+    const secrets: Record<string, any> = {
+        CLIENTS_LIST: generalSecret,
+    };
 
-//     svc.supportedTenants.forEach((t) => {
-//         secrets[`${t.tenant.toUpperCase()}_CONFIG`] = getTenantSecret(stack, t.tenant);
-//     });
+    svc.supportedTenants.forEach((t) => {
+        secrets[`${t.tenant.toUpperCase()}_CONFIG`] = getTenantSecret(stack, t.tenant);
+    });
 
-//     makeHttpFargate({
-//         svc: {
-//             name:         svc.name,
-//             imageRepo:    svc.imageRepo,
-//             imageTag:     imageTag,
-//             port:         svc.port,
-//         },
-//         clusterArn:    cluster.arn,
-//         tg:            frontendTg,
-//         sgIds:         [sgFrontendId],
-//         subnets:       publicSubnetIds,
-//         taskRole,
-//         env,
-//         secrets,
-//         assignPublicIp: true,
-//     });
-// });
+    makeHttpFargate({
+        svc: {
+            name:         svc.name,
+            imageRepo:    svc.imageRepo,
+            imageTag:     imageTag,
+            port:         svc.port,
+        },
+        clusterArn:    cluster.arn,
+        tg:            frontendTg,
+        sgIds:         [sgFrontendId],
+        subnets:       publicSubnetIds,
+        taskRole,
+        env,
+        secrets,
+        assignPublicIp: true,
+    });
+});
 
 export function getExports() {
     return {

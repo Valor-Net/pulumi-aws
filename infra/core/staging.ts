@@ -104,14 +104,14 @@ const vpceSqs = createVpcInterfaceEndpoint({
 });
 
 /* SQS ------------------------------------------------------------*/ 
-const stagingQueue = createQueue({
-    name: "valornet-staging-email-queue",
+const emailQueue = createQueue({
+    name: `${stack}-email-queue`,
     tags: {
         Environment: "staging",
         Project: "valornet"
     }
 });
-export const devQueueUrl = stagingQueue.id;
+export const devQueueUrl = emailQueue.id;
 
 /* Bastion Host ---------------------------------------- */
 const bastion = createBastionHost(`${stack}-bastion`, {
@@ -123,7 +123,7 @@ const bastion = createBastionHost(`${stack}-bastion`, {
 
 /* ALB ----------------------------------------------------------------- */
 const alb = createAlb(`${stack}-alb`, vpc, [sgAlb.id]);
-// const frontendAlb = createAlb(`${stack}-front-alb`, vpc, [sgFrontend.id], true);
+const frontendAlb = createAlb(`${stack}-front-alb`, vpc, [sgFrontend.id], true);
 
 
 
@@ -229,6 +229,9 @@ export function getExports() {
         sgVpcEndpointsId: sgVpcEndpoints.id,
         sgFrontendId: sgFrontend.id,
         albArn: alb.loadBalancer.arn,
+        frontendAlbArn: frontendAlb.loadBalancer.arn,
+        frontendAlbDns: frontendAlb.loadBalancer.dnsName,
+        frontendlistenerArn: frontendAlb.listeners.apply(l => l![0].arn),
         listenerArn: alb.listeners.apply(l => l![0].arn),
         rdsEndpoint: pulumi.unsecret(rds.endpoint),
         rdsPort: pulumi.unsecret(rds.port),
@@ -238,10 +241,9 @@ export function getExports() {
         vpceSecretsDns: vpceSecrets.dnsEntries,
         vpceSqsId: vpceSqs.id,
         vpceSqsDns: vpceSqs.dnsEntries,
-        stagingQueueUrl: stagingQueue.id,
+        emailQueue: emailQueue.name,
         generalSecretArn: clientsSecret.arn,
         privDnsNsId: privateDnsNs.id,
         rdsPassword: pulumi.secret(dbPassword),
-        devQueueUrl: stagingQueue.id
     };
 }
