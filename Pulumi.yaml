@@ -1,5 +1,5 @@
 name: valornet-infra
-description: A minimal AWS TypeScript Pulumi program
+description: Valornet infrastructure
 runtime:
   name: nodejs
   options:

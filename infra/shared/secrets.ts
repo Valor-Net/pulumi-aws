@@ -1,13 +1,19 @@
-// secrets.ts
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import * as fs from "fs";
+import { frontendServices } from "../servicesConfig";
+
+// Cache para evitar criação duplicada de secrets
+const secretCache = new Map<string, aws.secretsmanager.Secret>();
 
 export function ensureJsonSecretWithDefault(
     logicalName: string,
     defaultValue: any,
     description?: string
 ): aws.secretsmanager.Secret {
+    if (secretCache.has(logicalName)) {
+        return secretCache.get(logicalName)!;
+    }
 
     const secret = new aws.secretsmanager.Secret(logicalName, {
         name: logicalName,
@@ -21,11 +27,12 @@ export function ensureJsonSecretWithDefault(
             secretString: JSON.stringify(defaultValue),
         },
         {
-            protect: true,
             deleteBeforeReplace: false,
         },
     );
 
+    // Adiciona no cache
+    secretCache.set(logicalName, secret);
     return secret;
 }
 
@@ -41,12 +48,18 @@ export function getSecretString(
     ).apply(v => v.secretString!);
 }
 
-
 export function ensureSecret(name: string, description?: string): aws.secretsmanager.Secret {
-    return new aws.secretsmanager.Secret(name, {
+    if (secretCache.has(name)) {
+        return secretCache.get(name)!;
+    }
+
+    const secret = new aws.secretsmanager.Secret(name, {
         name,
         description: description ?? `Secret for ${name}`,
     });
+
+    secretCache.set(name, secret);
+    return secret;
 }
 
 export function getSecretValueOutput(secretName: pulumi.Input<string>): pulumi.Output<string | undefined> {
@@ -69,11 +82,17 @@ export function createJsonSecret(name: string, data: pulumi.Output<object>, desc
 }
 
 export function ensureTextSecret(name: string, value: pulumi.Input<string>) {
+    if (secretCache.has(name)) {
+        return secretCache.get(name)!;
+    }
+
     const secret = new aws.secretsmanager.Secret(name, {name});
     new aws.secretsmanager.SecretVersion(`${name}-v`, {
         secretId: secret.id,
         secretString: value,
     });
+
+    secretCache.set(name, secret);
     return secret;
 }
 
@@ -88,4 +107,65 @@ export function getKeyFromSecretsOrFile(secretName: string, filePath: string): s
     } catch (error) {
         throw new Error(`${secretName} environment variable is required for CI/CD or ${filePath} file for local development`);
     }
-};
+}
+
+export function createManagedSecret(name: string, initialValue: any, description: string): aws.secretsmanager.Secret {
+    if (secretCache.has(name)) {
+        return secretCache.get(name)!;
+    }
+
+    const secret = new aws.secretsmanager.Secret(name, {
+        name: name,
+        description: description,
+    });
+
+    new aws.secretsmanager.SecretVersion(`${name}-version`, {
+        secretId: secret.id,
+        secretString: JSON.stringify(initialValue),
+    }, {
+        ignoreChanges: ["secretString"],
+        dependsOn: [secret]
+    });
+
+    secretCache.set(name, secret);
+    return secret;
+}
+
+
+export function getTenantSecret(stack: string, tenantName: string): aws.secretsmanager.Secret {
+    const secretName = `${stack}-${tenantName}-secret`;
+    
+    if (secretCache.has(secretName)) {
+        return secretCache.get(secretName)!;
+    }
+    
+    const customSettings = getTenantCustomSettings(tenantName);
+    
+    const finalSettings = Object.keys(customSettings).length > 0 
+        ? customSettings 
+        : {};
+    
+    console.log(`🔑 getTenantSecret: Criando secret para tenant: ${tenantName}`);
+    
+    const tenantSecret = createManagedSecret(
+        secretName,
+        finalSettings,
+        `Secret for tenant ${tenantName} - managed by TenantProviderService`
+    );
+    
+    return tenantSecret;
+}
+
+/**
+ * Busca configurações customizadas de um tenant nos frontendServices
+ */
+export function getTenantCustomSettings(tenantName: string): any {
+    for (const svc of frontendServices) {
+        const tenantConfig = svc.supportedTenants.find(t => t.tenant === tenantName);
+        if (tenantConfig) {
+            console.log(`📋 Configurações encontradas para tenant ${tenantName}:`, tenantConfig.customSettings);
+            return tenantConfig.customSettings;
+        }
+    }
+    return {};
+}

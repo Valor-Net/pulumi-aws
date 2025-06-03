@@ -1,18 +1,21 @@
 {
     "compilerOptions": {
-        "strict": true,
-        "outDir": "bin",
-        "target": "es2020",
-        "module": "commonjs",
-        "moduleResolution": "node",
-        "sourceMap": true,
-        "experimentalDecorators": true,
-        "pretty": true,
-        "noFallthroughCasesInSwitch": true,
-        "noImplicitReturns": true,
-        "forceConsistentCasingInFileNames": true
+      "target": "es2020",
+      "module": "commonjs",
+      "moduleResolution": "node",
+      "outDir": "bin",
+      "rootDir": ".",
+      "strict": true,
+      "esModuleInterop": true,
+      "skipLibCheck": true,
+      "forceConsistentCasingInFileNames": true,
+      "noImplicitReturns": true,
+      "noFallthroughCasesInSwitch": true,
+      "sourceMap": true
     },
-    "files": [
-        "index.ts"
+    "include": [
+      "index.ts",
+      "infra/**/*.ts"
     ]
-}
+  }
+  

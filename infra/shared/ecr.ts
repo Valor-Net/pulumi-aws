@@ -1,8 +1,8 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import { HttpSvc, WorkerSvc } from "../stacks/servicesConfig";
+import { FrontendSvc, HttpSvc, WorkerSvc } from '../servicesConfig';
 
-export const createEcrRepo = (name: string, stack: string, svc: HttpSvc | WorkerSvc) => {
+export const createEcrRepo = (name: string, stack: string, svc: HttpSvc | WorkerSvc | FrontendSvc) => {
     const repo = new aws.ecr.Repository(name, {
         name: name,
         imageScanningConfiguration: { scanOnPush: false },

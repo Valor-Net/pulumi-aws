@@ -1,5 +1,4 @@
 import * as aws from "@pulumi/aws";
-import { PrivateDnsNamespace } from "@pulumi/aws/servicediscovery";
 import * as awsx from "@pulumi/awsx";
 import * as pulumi from "@pulumi/pulumi";
 
@@ -9,18 +8,13 @@ interface TaskRoleOptions {
     inlinePolicies?: aws.iam.RolePolicyArgs[];
 }
 
-function getImageTag(): string {
-    return process.env.IMAGE_TAG || 'latest';
-}
-
-function buildImageUrl(repo: string): string {
+function buildImageUrl(repo: string, imageTag: string): string {
     const registry = "331240720676.dkr.ecr.us-east-1.amazonaws.com";
-    const tag = getImageTag();
-    return `${registry}/${repo}:${tag}`;
+    return `${registry}/${repo}:${imageTag}`;
 }
 
 export function makeHttpFargate(args: {
-    svc: { name: string; imageRepo: string, port: number };
+    svc: { name: string; imageRepo: string, imageTag: string,  port: number };
     clusterArn: pulumi.Input<string>;
     tg: aws.lb.TargetGroup;
     sgIds: pulumi.Input<string>[];
@@ -39,7 +33,7 @@ export function makeHttpFargate(args: {
     const phpContainerName = args.nginxSidecarImageRepo ? "php" : "web";
     const phpContainer = {
         name: args.svc.name,
-        image: buildImageUrl(args.svc.imageRepo),
+        image: buildImageUrl(args.svc.imageRepo, args.svc.imageTag),
         cpu: 256,
         memory: 512,
         portMappings: args.nginxSidecarImageRepo
@@ -75,7 +69,7 @@ export function makeHttpFargate(args: {
     if (args.nginxSidecarImageRepo) {
         containers["web"] = {
             name: "web",
-            image: buildImageUrl(args.nginxSidecarImageRepo),
+            image: buildImageUrl(args.nginxSidecarImageRepo, args.svc.imageTag),
             cpu: 128,
             memory: 128,
             portMappings: [{ containerPort: 80, hostPort: 80, targetGroup: args.tg }],
@@ -114,7 +108,7 @@ export function makeHttpFargate(args: {
 }
 
 export function makeWorkerFargate(args: {
-    svc: { name: string; imageRepo: string; command: pulumi.Input<string>[]; cpu?: number; memory?: number };
+    svc: { name: string; imageRepo: string; imageTag: string, command: pulumi.Input<string>[]; cpu?: number; memory?: number };
     clusterArn: pulumi.Input<string>;
     sgIds: pulumi.Input<string>[];
     subnets: pulumi.Input<pulumi.Input<string>[]>;
@@ -130,7 +124,6 @@ export function makeWorkerFargate(args: {
         name: `${args.svc.name}-task`,
         policies: []
     });
-
   
 
     return new awsx.ecs.FargateService(`${args.svc.name}-worker`, {
@@ -146,7 +139,7 @@ export function makeWorkerFargate(args: {
             containers: {
                 worker: {
                     name: args.svc.name,
-                    image: buildImageUrl(args.svc.imageRepo),
+                    image: buildImageUrl(args.svc.imageRepo, args.svc.imageTag),
                     cpu: args.svc.cpu ?? 256,
                     memory: args.svc.memory ?? 512,
                     command: args.svc.command,
@@ -234,11 +227,11 @@ export function createEcsExecutionRole(name: string): aws.iam.Role {
     return role;
 }
 
-export function createSdService(name: string, ns: PrivateDnsNamespace) {
+export function createSdService(name: string, nsId: pulumi.Input<string>) {
     return new aws.servicediscovery.Service(`${name}-sd`, {
       name,
       dnsConfig: {
-        namespaceId: ns.id,
+        namespaceId: nsId,
         dnsRecords: [{ ttl: 10, type: "A" }],
       },
       healthCheckCustomConfig: { failureThreshold: 1 },

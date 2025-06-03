@@ -25,6 +25,50 @@ export interface WorkerSvc {
     memory?: number;
 }
 
+
+export interface TenantConfig {
+    tenant: string;
+    subdomain: string;
+    customSettings: Record<string, any>;
+}
+
+export interface FrontendSvc {
+    name: string;
+    envName: string;
+    imageRepo: string;
+    nginxSidecarImageRepo?: string;
+    port: number;
+    tech: string;
+    policies?: (string | Output<string>)[];
+    supportedTenants: TenantConfig[];
+}
+
+
+
+
+/* EDITAR AQUI quando nascer novo frontend */
+const frontendServices: FrontendSvc[] = [
+    {
+        name: "valornet-frontend",
+        envName: "ValornetFrontend", 
+        imageRepo: "staging-valornet-frontend-repo",
+        port: 3000,
+        tech: "nextjs",
+        policies: [
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+        ],
+        supportedTenants: [
+            {
+                tenant: "demo",
+                subdomain: "demo.valornetvets.com",
+                customSettings: {
+                    theme: "default-theme",
+                }
+            },
+        ]
+    },
+];
+
   
 /* EDITAR AQUI quando nascer novo serviço */
 const httpServices: HttpSvc[] = [
@@ -58,5 +102,5 @@ const workerServices: WorkerSvc[] = [
     },
 ];
 
-export { httpServices, workerServices };
+export { frontendServices, httpServices, workerServices };
   
