@@ -60,7 +60,7 @@ const frontendServices: FrontendSvc[] = [
         supportedTenants: [
             {
                 tenant: "demo",
-                subdomain: "demo.valornetvets.com",
+                subdomain: "stg-demo.valornetvets.com",
                 customSettings: {
                     theme: "default-theme",
                 }

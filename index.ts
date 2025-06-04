@@ -6,7 +6,6 @@ const stackMap: Record<string, () => any> = {
     "staging-core":    () => require("./infra/core/staging"),
     "staging-services": () => require("./infra/services/staging"),
     "dev-core":        () => require("./infra/core/dev"),
-    "dev-services":    () => require("./infra/services/dev"),
     "production-core": () => require("./infra/core/production"),
     "production-services": () => require("./infra/services/production"),
 };

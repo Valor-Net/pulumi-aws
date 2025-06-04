@@ -87,7 +87,7 @@ export function makeHttpFargate(args: {
         };
     }
     
-    return new awsx.ecs.FargateService(`${args.svc.name}-svc`, {
+    return new awsx.ecs.FargateService(`${args.svc.name}`, {
         forceNewDeployment: true,
         cluster: args.clusterArn,
         desiredCount: 1,

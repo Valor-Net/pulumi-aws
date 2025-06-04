@@ -58,12 +58,6 @@ const sgRedis = createSecurityGroup(`${stack}-redis-sg`, vpc.vpc.id, [{
     protocol: "tcp",
     securityGroups: [sgTasks.id],
 }]);
-const sgVpcEndpoints = createSecurityGroup(`${stack}-vpc-endpoints-sg`, vpc.vpc.id, [{
-    protocol: "tcp",
-    fromPort: 443,
-    toPort: 443,
-    securityGroups: [sgTasks.id],
-}]);
 const sgFrontend = createSecurityGroup(`${stack}-frontend-sg`, vpc.vpc.id, [
     {
         fromPort: 80,
@@ -83,7 +77,27 @@ const sgFrontend = createSecurityGroup(`${stack}-frontend-sg`, vpc.vpc.id, [
         protocol: "tcp",
         cidrBlocks: ["0.0.0.0/0"],
     },
+], [
+    {
+        fromPort: 443,
+        toPort: 443,
+        protocol: "tcp",
+        cidrBlocks: ["0.0.0.0/0"],
+    },
+    {
+        fromPort: 0,
+        toPort: 0,
+        protocol: "-1",
+        cidrBlocks: ["0.0.0.0/0"]
+    }
 ]);
+const sgVpcEndpoints = createSecurityGroup(`${stack}-vpc-endpoints-sg`, vpc.vpc.id, [{
+    protocol: "tcp",
+    fromPort: 443,
+    toPort: 443,
+    securityGroups: [sgTasks.id, sgFrontend.id],
+}]);
+
 
 // Interface VPC Endpoints --------------------------------------*/
 const vpceSecrets = createVpcInterfaceEndpoint({
@@ -102,6 +116,7 @@ const vpceSqs = createVpcInterfaceEndpoint({
     securityGroupIds: [sgVpcEndpoints.id],
     privateDnsEnabled: true,
 });
+
 
 /* SQS ------------------------------------------------------------*/ 
 const emailQueue = createQueue({

@@ -26,7 +26,7 @@ const listenerArn           = core.getOutput("listenerArn");
 const albArn                = core.getOutput("albArn");
 const frontendAlbArn        = core.getOutput("frontendAlbArn");
 const redisEndpoint         = core.getOutput("redisEndpoint");
-const emailQueue        = core.getOutput("emailQueue");
+const emailQueue            = core.getOutput("emailQueue");
 const generalSecretArn      = core.getOutput("generalSecretArn");
 const frontendlistenerArn   = core.getOutput("frontendlistenerArn");
 const privDnsNsId           = core.getOutput("privDnsNsId");
@@ -71,6 +71,11 @@ const jwtPrivSecret = ensureTextSecret(`private-key-${stack}`, privateKey);
 const jwtPubSecret = ensureTextSecret(`public-key-${stack}`, publicKey);
 
 httpServices.forEach((svc, idx) => {
+
+    // if(svc.name == "crisis-line-service"){
+    //     return;
+    // }
+
     const imageTag = config.require(`${svc.name}.imageTag`);
    
     const targetPort = svc.nginxSidecarImageRepo ? 80 : svc.port;
