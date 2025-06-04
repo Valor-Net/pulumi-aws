@@ -9,17 +9,11 @@ on:
       service_name:
         description: 'Service name'
         required: true
-      environment:
-        description: 'Environment'
-        required: true
       stack:
         description: 'Stack name'
         required: true
       commit_sha:
         description: 'Commit SHA'
-        required: true
-      app_repo:
-        description: 'App repository'
         required: true
       ecr_repository:
         description: 'ECR Repository'
@@ -62,7 +56,6 @@ jobs:
         PULUMI_BACKEND_URL: ${{ secrets.PULUMI_BACKEND_URL }}
       run: |
         echo "🔄 Atualizando imagem do serviço: ${{ github.event.inputs.service_name }}"
-        echo "📍 Environment: ${{ github.event.inputs.environment }}"
         echo "🏷️ Nova imagem tag: ${{ github.event.inputs.image_tag }}"
         
         # Definir variáveis
@@ -170,10 +163,9 @@ jobs:
           
           Deploy info:
           - Service: ${SERVICE_NAME}
-          - Environment: ${{ github.event.inputs.environment }}
+          - Stack: ${{ github.event.inputs.stack }}
           - Image Tag: ${IMAGE_TAG}
           - Commit SHA: ${{ github.event.inputs.commit_sha }}
-          - App Repo: ${{ github.event.inputs.app_repo }}"
           
           # Push mudanças
           git push origin main
