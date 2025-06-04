@@ -92,12 +92,15 @@ jobs:
         # 2. ATUALIZAR ECS SERVICE
         # ========================================
         echo "🚀 Atualizando serviço ECS..."
+
+        echo "cluster: ${{github.event.inputs.ecs_cluster}}"
+        echo "service: ${{github.event.inputs.service_name}}"
         
         # Obter a task definition atual
         echo "📋 Obtendo task definition atual..."
         TASK_DEFINITION_ARN=$(aws ecs describe-services \
-          --cluster ${CLUSTER_NAME} \
-          --services ${SERVICE_NAME} \
+          --cluster ${{github.event.inputs.ecs_cluster}} \
+          --services ${{github.event.inputs.service_name}} \
           --query 'services[0].taskDefinition' \
           --output text)
         
