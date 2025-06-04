@@ -141,18 +141,24 @@ jobs:
           --task-definition ${NEW_TASK_DEFINITION_ARN} \
           --force-new-deployment
         
-        echo "⏳ Aguardando estabilização do serviço..."
-        
-        # Aguardar estabilização com timeout
-        timeout 600 aws ecs wait services-stable \
-          --cluster ${CLUSTER_NAME} \
-          --services ${SERVICE_NAME} || {
-            echo "⚠️ Timeout aguardando estabilização, mas deployment foi iniciado"
-            exit 0
-          }
         
         # ========================================
-        # 3. COMMIT MUDANÇAS DO PULUMI (OPCIONAL)
+        # 3. REFRESH PULUMI STATE (SINCRONIZAR COM REALIDADE)
+        # ========================================
+        echo "🔄 Executando Pulumi refresh para sincronizar estado..."
+        echo "📝 Isso vai atualizar o state file com as mudanças feitas diretamente no AWS"
+        
+        # Fazer refresh do estado para evitar drift
+        if pulumi refresh --yes --stack "${STACK_NAME}"; then
+          echo "✅ Pulumi state atualizado com sucesso!"
+          echo "📊 Estado sincronizado entre Pulumi e AWS"
+        else
+          echo "⚠️ Aviso: Falha no pulumi refresh, mas deployment foi concluído"
+          echo "💡 Considere executar 'pulumi refresh' manualmente depois"
+        fi
+
+        # ========================================
+        # 4. COMMIT MUDANÇAS DO PULUMI
         # ========================================
         echo "💾 Fazendo commit das mudanças na configuração..."
         
@@ -164,13 +170,7 @@ jobs:
           git config --global user.name "CI/CD Bot"
           
           git add Pulumi.${STACK_NAME}.yaml
-          git commit -m "ci: update ${SERVICE_NAME} imageTag to ${IMAGE_TAG}
-          
-          Deploy info:
-          - Service: ${SERVICE_NAME}
-          - Stack: ${{ github.event.inputs.stack }}
-          - Image Tag: ${IMAGE_TAG}
-          - Commit SHA: ${{ github.event.inputs.commit_sha }}
+          git commit -m "ci: update ${SERVICE_NAME} imageTag to ${IMAGE_TAG}"
           
           # Push mudanças
           git push origin main
