@@ -112,7 +112,7 @@ jobs:
           pulumi preview
           
           # Executar pulumi up com a nova tag
-          pulumi up --yes --suppress-outputs --target ${{ github.event.inputs.service_urn }}
+          pulumi up --yes --suppress-outputs --target "${{ github.event.inputs.service_urn }}"
           
           echo "✅ Infraestrutura atualizada com sucesso"
 
