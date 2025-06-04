@@ -31,6 +31,8 @@ on:
 jobs:
   update-service:
     runs-on: ubuntu-latest
+    environment: staging
+    name: Run ECS update - ${{ github.event.inputs.stack }} - ${{ github.event.inputs.service_name }}
     
     steps:
     - name: Configure AWS Credentials
