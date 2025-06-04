@@ -175,7 +175,7 @@ jobs:
           git config --global user.name "CI/CD Bot"
           
           git add Pulumi.${STACK_NAME}.yaml
-          git commit -m "ci: update ${SERVICE_NAME} imageTag to ${IMAGE_TAG}"
+          git commit -m "🤖 ci: update ${SERVICE_NAME} imageTag to ${IMAGE_TAG}"
           
           # Push mudanças
           git push origin main
