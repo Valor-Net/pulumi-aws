@@ -69,14 +69,17 @@ jobs:
         CLUSTER_NAME="${{ github.event.inputs.ecs_cluster }}"
         SERVICE_NAME="${{ github.event.inputs.service_name }}"
         ECR_REPOSITORY="${{ github.event.inputs.ecr_repository }}"
+        ECR_NGINX_REPOSITORY="${{ github.event.inputs.ecr_nginx_repository }}"
         IMAGE_TAG="${{ github.event.inputs.image_tag }}"
         STACK_NAME="${{ github.event.inputs.stack }}"
         
-        # Construir a URI completa da imagem
+        # Construir as URIs completas das imagens
         AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-        IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}"
+        APP_IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}"
+        NGINX_IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${ECR_NGINX_REPOSITORY}:${IMAGE_TAG}"
         
-        echo "🐳 Nova imagem: ${IMAGE_URI}"
+        echo "🐳 Nova imagem da aplicação: ${APP_IMAGE_URI}"
+        echo "🌐 Nova imagem do nginx: ${NGINX_IMAGE_URI}"
         
         # ========================================
         # 1. ATUALIZAR CONFIG DO PULUMI
@@ -117,17 +120,30 @@ jobs:
           --query 'taskDefinition' \
           --output json > task-definition.json
         
-        # Atualizar a imagem na task definition
-        echo "🔧 Atualizando imagem na task definition..."
+        # Atualizar as imagens na task definition
+        echo "🔧 Atualizando imagens na task definition..."
         
-        # Usar jq para atualizar a imagem (assumindo que é o primeiro container)
-        jq --arg IMAGE_URI "${IMAGE_URI}" \
-          '.containerDefinitions[0].image = $IMAGE_URI | 
+        # Mostrar containers atuais para debug
+        echo "📊 Containers atuais:"
+        jq -r '.containerDefinitions[] | "  - \(.name): \(.image)"' task-definition.json
+        
+        # Usar jq para atualizar as imagens baseado no nome do container
+        jq --arg APP_IMAGE_URI "${APP_IMAGE_URI}" \
+           --arg NGINX_IMAGE_URI "${NGINX_IMAGE_URI}" '
+           .containerDefinitions = (.containerDefinitions | map(
+             if .name == "php" then
+               .image = $APP_IMAGE_URI
+             elif .name == "web" then
+               .image = $NGINX_IMAGE_URI
+             else
+               .
+             end
+           )) |
            del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .placementConstraints, .compatibilities, .registeredAt, .registeredBy)' \
           task-definition.json > new-task-definition.json
         
-        echo "📋 Nova task definition:"
-        cat new-task-definition.json | jq '.containerDefinitions[0].image'
+        echo "📋 Nova task definition (containers):"
+        jq -r '.containerDefinitions[] | "  - \(.name): \(.image)"' new-task-definition.json
         
         # Registrar nova task definition
         echo "📝 Registrando nova task definition..."
@@ -175,7 +191,7 @@ jobs:
           git config --global user.name "CI/CD Bot"
           
           git add Pulumi.${STACK_NAME}.yaml
-          git commit -m "🤖 ci: update ${SERVICE_NAME} imageTag to ${IMAGE_TAG}"
+          git commit -m "🤖 ci: update ${SERVICE_NAME} imageTag to ${IMAGE_TAG} (app + nginx)"
           
           # Push mudanças
           git push origin main
@@ -188,4 +204,7 @@ jobs:
         echo "  - Config Pulumi: ✅ Atualizada"
         echo "  - ECS Service: ✅ Atualizado"
         echo "  - Serviço: ${SERVICE_NAME}"
-        echo "  - Nova imagem: ${IMAGE_TAG}"
+        echo "  - Nova tag da aplicação: ${IMAGE_TAG}"
+        echo "  - Nova tag do nginx: ${IMAGE_TAG}"
+        echo "  - Imagem da aplicação: ${APP_IMAGE_URI}"
+        echo "  - Imagem do nginx: ${NGINX_IMAGE_URI}"
