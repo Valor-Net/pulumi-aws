@@ -33,7 +33,11 @@ jobs:
     runs-on: ubuntu-latest
     environment: staging
     name: Run ECS update - ${{ github.event.inputs.stack }} - ${{ github.event.inputs.service_name }}
-    
+    permissions:
+      contents: write
+      id-token: write
+      actions: read
+
     steps:
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
@@ -45,6 +49,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
+        token: ${{ secrets.INFRA_REPO_TOKEN }}
         persist-credentials: true 
       
     - name: Setup Pulumi
