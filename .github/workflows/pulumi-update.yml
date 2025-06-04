@@ -106,10 +106,10 @@ jobs:
           
           # Selecionar o stack correto
           pulumi stack select ${{ github.event.inputs.stack }}
+
+          echo "🔄 Carregando estado da stack..."
+          pulumi refresh --yes
           
-          # Mostrar o preview primeiro
-          echo "📋 Preview das mudanças:"
-          pulumi preview
           
           # Executar pulumi up com a nova tag
           pulumi up --yes --suppress-outputs --target "${{ github.event.inputs.service_urn }}"
