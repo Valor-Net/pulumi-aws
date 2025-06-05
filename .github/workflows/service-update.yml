@@ -20,7 +20,7 @@ on:
         required: true
       ecr_nginx_repository:
         description: 'ECR Nginx Repository'
-        required: true
+        required: false
       ecs_cluster:
         description: 'ECS Cluster'
         required: true
@@ -76,10 +76,18 @@ jobs:
         # Construir as URIs completas das imagens
         AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
         APP_IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}"
-        NGINX_IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${ECR_NGINX_REPOSITORY}:${IMAGE_TAG}"
         
         echo "🐳 Nova imagem da aplicação: ${APP_IMAGE_URI}"
-        echo "🌐 Nova imagem do nginx: ${NGINX_IMAGE_URI}"
+        
+        # Verificar se existe imagem NGINX
+        HAS_NGINX=false
+        if [ -n "${ECR_NGINX_REPOSITORY}" ] && [ "${ECR_NGINX_REPOSITORY}" != "" ]; then
+          HAS_NGINX=true
+          NGINX_IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${ECR_NGINX_REPOSITORY}:${IMAGE_TAG}"
+          echo "🌐 Nova imagem do nginx: ${NGINX_IMAGE_URI}"
+        else
+          echo "ℹ️ Nenhuma imagem NGINX especificada - usando apenas aplicação principal"
+        fi
         
         # ========================================
         # 1. ATUALIZAR CONFIG DO PULUMI
@@ -127,20 +135,55 @@ jobs:
         echo "📊 Containers atuais:"
         jq -r '.containerDefinitions[] | "  - \(.name): \(.image)"' task-definition.json
         
-        # Usar jq para atualizar as imagens baseado no nome do container
-        jq --arg APP_IMAGE_URI "${APP_IMAGE_URI}" \
-           --arg NGINX_IMAGE_URI "${NGINX_IMAGE_URI}" '
-           .containerDefinitions = (.containerDefinitions | map(
-             if .name == "php" then
-               .image = $APP_IMAGE_URI
-             elif .name == "web" then
-               .image = $NGINX_IMAGE_URI
-             else
-               .
-             end
-           )) |
-           del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .placementConstraints, .compatibilities, .registeredAt, .registeredBy)' \
-          task-definition.json > new-task-definition.json
+        # Lógica condicional baseada na presença do NGINX
+        if [ "${HAS_NGINX}" = true ]; then
+          echo "🌐 Modo com NGINX - Atualizando containers 'php' e 'web'"
+          # Com NGINX: 'php' = aplicação principal, 'web' = nginx
+          jq --arg APP_IMAGE_URI "${APP_IMAGE_URI}" \
+             --arg NGINX_IMAGE_URI "${NGINX_IMAGE_URI}" '
+             .containerDefinitions = (.containerDefinitions | map(
+               if .name == "php" then
+                 .image = $APP_IMAGE_URI
+               elif .name == "web" then
+                 .image = $NGINX_IMAGE_URI
+               else
+                 .
+               end
+             )) |
+             del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .placementConstraints, .compatibilities, .registeredAt, .registeredBy)' \
+            task-definition.json > new-task-definition.json
+        else
+          echo "🔧 Modo sem NGINX - Verificando containers disponíveis..."
+          
+          # Verificar quais containers existem
+          CONTAINERS=$(jq -r '.containerDefinitions[].name' task-definition.json)
+          echo "📋 Containers encontrados: ${CONTAINERS}"
+          
+          # Determinar qual container atualizar
+          if echo "${CONTAINERS}" | grep -q "worker"; then
+            echo "👷 Container 'worker' encontrado - atualizando como principal"
+            TARGET_CONTAINER="worker"
+          elif echo "${CONTAINERS}" | grep -q "web"; then
+            echo "🌐 Container 'web' encontrado - atualizando como principal"
+            TARGET_CONTAINER="web"
+          else
+            echo "❌ Erro: Nenhum container conhecido encontrado (worker/web)"
+            exit 1
+          fi
+          
+          # Atualizar apenas o container principal
+          jq --arg APP_IMAGE_URI "${APP_IMAGE_URI}" \
+             --arg TARGET_CONTAINER "${TARGET_CONTAINER}" '
+             .containerDefinitions = (.containerDefinitions | map(
+               if .name == $TARGET_CONTAINER then
+                 .image = $APP_IMAGE_URI
+               else
+                 .
+               end
+             )) |
+             del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .placementConstraints, .compatibilities, .registeredAt, .registeredBy)' \
+            task-definition.json > new-task-definition.json
+        fi
         
         echo "📋 Nova task definition (containers):"
         jq -r '.containerDefinitions[] | "  - \(.name): \(.image)"' new-task-definition.json
@@ -191,7 +234,13 @@ jobs:
           git config --global user.name "CI/CD Bot"
           
           git add Pulumi.${STACK_NAME}.yaml
-          git commit -m "🤖 ci: update ${SERVICE_NAME} imageTag to ${IMAGE_TAG} (app + nginx)"
+          
+          # Commit message condicional
+          if [ "${HAS_NGINX}" = true ]; then
+            git commit -m "🤖 ci: update ${SERVICE_NAME} imageTag to ${IMAGE_TAG} (app + nginx)"
+          else
+            git commit -m "🤖 ci: update ${SERVICE_NAME} imageTag to ${IMAGE_TAG} (app only)"
+          fi
           
           # Push mudanças
           git push origin main
@@ -204,7 +253,13 @@ jobs:
         echo "  - Config Pulumi: ✅ Atualizada"
         echo "  - ECS Service: ✅ Atualizado"
         echo "  - Serviço: ${SERVICE_NAME}"
-        echo "  - Nova tag da aplicação: ${IMAGE_TAG}"
-        echo "  - Nova tag do nginx: ${IMAGE_TAG}"
+        echo "  - Nova tag: ${IMAGE_TAG}"
         echo "  - Imagem da aplicação: ${APP_IMAGE_URI}"
-        echo "  - Imagem do nginx: ${NGINX_IMAGE_URI}"
+        
+        if [ "${HAS_NGINX}" = true ]; then
+          echo "  - Imagem do nginx: ${NGINX_IMAGE_URI}"
+          echo "  - Containers atualizados: php, web"
+        else
+          echo "  - Modo: Sem NGINX"
+          echo "  - Container atualizado: ${TARGET_CONTAINER:-'detectado automaticamente'}"
+        fi
