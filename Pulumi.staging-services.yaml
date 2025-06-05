@@ -1,5 +1,5 @@
 config:
-  valornet-infra:auth-service.imageTag: 88c93544
+  valornet-infra:auth-service.imageTag: 52ce615c
   valornet-infra:email-service.imageTag: initial
   valornet-infra:valornet-frontend.imageTag: initial
   valornet-infra:crisis-line-service.imageTag: initial
