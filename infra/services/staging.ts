@@ -9,8 +9,7 @@ import { createEcrRepo } from "../shared/ecr";
 import { createEcsTaskRole, createSdService, makeHttpFargate, makeWorkerFargate } from "../shared/ecs";
 import {
     ensureTextSecret,
-    getKeyFromSecretsOrFile,
-    getTenantSecret
+    getKeyFromSecretsOrFile
 } from "../shared/secrets";
 
 /* Config -------------------------------------------------- */
@@ -219,9 +218,9 @@ frontendServices.forEach((svc, idx) => {
         CLIENTS_LIST: generalSecret,
     };
 
-    svc.supportedTenants.forEach((t) => {
-        secrets[`${t.tenant.toUpperCase()}_CONFIG`] = getTenantSecret(stack, t.tenant);
-    });
+    // svc.supportedTenants.forEach((t) => {
+    //     secrets[`${t.tenant.toUpperCase()}_CONFIG`] = getTenantSecret(stack, t.tenant);
+    // });
 
     makeHttpFargate({
         svc: {
