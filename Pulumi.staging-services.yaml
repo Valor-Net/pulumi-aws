@@ -2,5 +2,4 @@ config:
   valornet-infra:auth-service.imageTag: 52ce615c
   valornet-infra:email-service.imageTag: 9a082c3a
   valornet-infra:valornet-frontend.imageTag: 04415f49
-  valornet-infra:crisis-line-service.imageTag: initial
 encryptionsalt: v1:uw0kFASTyV0=:v1:9egG5d7hsTIQQwX8:2a3xPmNztRuGT3GKMkvS/zy2k9kcjg==
