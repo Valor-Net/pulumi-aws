@@ -97,6 +97,7 @@ const workerServices: WorkerSvc[] = [
         policies: [
             aws.iam.ManagedPolicy.AmazonSQSFullAccess,
             aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonSESFullAccess,
         ],
         command: ["php", "artisan", "sqs:consume-email"]
     },
