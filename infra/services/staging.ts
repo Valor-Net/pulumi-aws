@@ -160,6 +160,9 @@ workerServices.forEach((wsvc) => {
         AWS_DEFAULT_REGION:  aws.config.requireRegion(),
         SQS_PREFIX:          pulumi.interpolate`https://sqs.${aws.config.region}.amazonaws.com/${accountId}`,
         SQS_QUEUE:           emailQueue,
+        MAIL_MAILER:         "ses",
+        MAIL_FROM_ADDRESS:   "no-reply@valornetvets.com",
+        MAIL_FROM_NAME:      "ValorNet"
     };
 
     if (wsvc.path !== "auth") {
