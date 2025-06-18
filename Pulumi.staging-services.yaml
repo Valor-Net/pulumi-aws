@@ -1,5 +1,5 @@
 config:
   valornet-infra:auth-service.imageTag: fcb0c34a
   valornet-infra:email-service.imageTag: 7ea12026
-  valornet-infra:valornet-frontend.imageTag: 1137d3f7
+  valornet-infra:valornet-frontend.imageTag: 0f9ea1af
 encryptionsalt: v1:uw0kFASTyV0=:v1:9egG5d7hsTIQQwX8:2a3xPmNztRuGT3GKMkvS/zy2k9kcjg==
