@@ -1,7 +1,7 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import * as random from "@pulumi/random";
-import { httpServices } from "../servicesConfig";
+import { goServices, laravelServices } from "../servicesConfig";
 import { createAlb } from "../shared/alb";
 import { createAlbIntegration, createApiMapping, createDomainName, createHttpApi, createRoute, createStage } from "../shared/apiGateway";
 import { createBastionHost } from "../shared/bastion";
@@ -16,7 +16,8 @@ import { createVpcLink } from "../shared/vpcLink";
 /* Config -------------------------------------------------- */
 const stack = pulumi.getStack();
 const caller = aws.getCallerIdentity({});
-const certArn               = "arn:aws:acm:us-east-1:331240720676:certificate/f5811ee2-2f5e-4424-a216-5c2a794e78c3";
+// const certArn               = "arn:aws:acm:us-east-1:331240720676:certificate/f5811ee2-2f5e-4424-a216-5c2a794e78c3";
+const certArn               = "arn:aws:acm:us-east-1:331240720676:certificate/be56385a-0d8e-4ec0-807a-958622aea2d5";
 
 /* VPC -------------------------------------------------- */
 const vpc = createVpc(`${stack}`);
@@ -42,6 +43,9 @@ const sgTasks = createSecurityGroup(`${stack}-task-sg`, vpc.vpc.id, [
     },
     {
         fromPort: 9000, toPort: 9000, protocol: "tcp", securityGroups: [sgAlb.id],
+    },
+    {
+        fromPort: 8080, toPort: 8080, protocol: "tcp", securityGroups: [sgAlb.id],
     },
 ]);
 const sgDb = createSecurityGroup(`${stack}-db-sg`, vpc.vpc.id, [
@@ -140,6 +144,17 @@ const bastion = createBastionHost(`${stack}-bastion`, {
 const alb = createAlb(`${stack}-alb`, vpc, [sgAlb.id]);
 const frontendAlb = createAlb(`${stack}-front-alb`, vpc, [sgFrontend.id], true);
 
+const httpsListener = new aws.lb.Listener(`${stack}-https-listener`, {
+    loadBalancerArn: frontendAlb.loadBalancer.arn,
+    port: 443,
+    protocol: "HTTPS",
+    sslPolicy: "ELBSecurityPolicy-2016-08",
+    certificateArn: certArn,
+    defaultActions: [{
+        type: "forward",
+        targetGroupArn: frontendAlb.defaultTargetGroup.arn,
+    }],
+});
 
 
 /* DB & REDIS --------------------------------------------- */
@@ -213,7 +228,7 @@ const albInt = alb.listeners.apply(listeners => {
 });
 
 
-httpServices.forEach(s =>
+[...laravelServices, ...goServices].forEach(s =>
     createRoute(`${s.name}-route`, httpApi.id, `ANY /${s.path}/v1/{proxy+}`, albInt.id)
 );
 
@@ -247,6 +262,7 @@ export function getExports() {
         frontendAlbArn: frontendAlb.loadBalancer.arn,
         frontendAlbDns: frontendAlb.loadBalancer.dnsName,
         frontendlistenerArn: frontendAlb.listeners.apply(l => l![0].arn),
+        frontendHttpsListenerArn: httpsListener.arn,
         listenerArn: alb.listeners.apply(l => l![0].arn),
         rdsEndpoint: pulumi.unsecret(rds.endpoint),
         rdsPort: pulumi.unsecret(rds.port),

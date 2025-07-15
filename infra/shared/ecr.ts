@@ -1,14 +1,14 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import { FrontendSvc, HttpSvc, WorkerSvc } from '../servicesConfig';
+import { ServiceInitialConfig } from '../servicesConfig';
 
-export const createEcrRepo = (name: string, stack: string, svc: HttpSvc | WorkerSvc | FrontendSvc) => {
+export const createEcrRepo = (name: string, stack: string, config: ServiceInitialConfig) => {
     const repo = new aws.ecr.Repository(name, {
         name: name,
         imageScanningConfiguration: { scanOnPush: false },
         imageTagMutability: "MUTABLE",
         encryptionConfigurations: [{ encryptionType: "AES256" }],
-        tags: { service: svc.name, environment: stack },
+        tags: { service: config.name, environment: stack },
     });
 
     new aws.ecr.LifecyclePolicy(`${name}-lifecycle`, {

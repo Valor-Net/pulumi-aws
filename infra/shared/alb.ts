@@ -16,6 +16,7 @@ export function createAlb(
         subnetIds: isPublic ? vpc.publicSubnetIds : vpc.privateSubnetIds,
     });
 }
+
 export function createTgAndRule(args: {
     albArn: Input<string>;
     listenerArn: Input<string>;
@@ -47,7 +48,7 @@ export function createTgAndRule(args: {
 export function createFrontendTgAndRule(args: {
     albArn: Input<string>;
     listenerArn: Input<string>;
-    svc: { name: string; port: number };
+    svc: { name: string; port: number, healthPath?: string };
     vpcId: Input<string>;
     priority: number;
     hostHeaders?: string[];
@@ -59,7 +60,7 @@ export function createFrontendTgAndRule(args: {
         protocol: "HTTP",
         targetType: "ip",
         healthCheck: { 
-            path: "/api/health",
+            path: args.svc.healthPath ?? "/api/health",
             matcher: "200",
             interval: 30,
             timeout: 5,

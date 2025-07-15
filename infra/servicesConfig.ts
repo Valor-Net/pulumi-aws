@@ -1,6 +1,6 @@
 import * as aws from '@pulumi/aws';
 import { Input, Output } from "@pulumi/pulumi";
-/** Serviços que expõem rota HTTP */
+
 export interface HttpSvc {
     name: string;
     envName: string;
@@ -39,21 +39,56 @@ export interface FrontendSvc {
     nginxSidecarImageRepo?: string;
     port: number;
     tech: string;
+    healthPath: string;
     policies?: (string | Output<string>)[];
     supportedTenants: TenantConfig[];
 }
 
+export interface ServiceInitialConfig {
+    name: string;
+    envName: string;
+    repo: string;
+    sidecarRepo?: string;
+}
 
-
+const servicesInitialConfig: Record<string, ServiceInitialConfig> = {
+    auth: {
+        name: "auth-service",
+        envName: "auth-service",
+        repo:"staging-services-auth-service-repo",
+        sidecarRepo: "staging-services-auth-service-nginx-repo",
+    },
+    backoffice: {
+        name: "backoffice-service",
+        envName: "BackofficeService",
+        repo:"staging-services-backoffice-service-repo",
+    },
+    emailService: {
+        name: "email-service",
+        envName: "EmailWorker",
+        repo:"staging-services-email-service-repo",
+    },
+    valornetFrontend: {
+        name: "valornet-frontend",
+        envName: "ValornetFrontend",
+        repo: "staging-services-valornet-frontend-repo",
+    },
+    backofficeFrontend: {
+        name: "valornet-backoffice-frontend",
+        envName: "ValornetBackofficeFrontend",
+        repo: "staging-services-valornet-backoffice-frontend-repo",
+    }
+}
 
 /* EDITAR AQUI quando nascer novo frontend */
 const frontendServices: FrontendSvc[] = [
     {
-        name: "valornet-frontend",
-        envName: "ValornetFrontend", 
-        imageRepo: "staging-services-valornet-frontend-repo",
+        name: servicesInitialConfig.valornetFrontend.name,
+        envName: servicesInitialConfig.valornetFrontend.envName, 
+        imageRepo: servicesInitialConfig.valornetFrontend.repo,
         port: 3000,
         tech: "nextjs",
+        healthPath: "/api/health",
         policies: [
             aws.iam.ManagedPolicy.SecretsManagerReadWrite,
         ],
@@ -67,33 +102,69 @@ const frontendServices: FrontendSvc[] = [
             },
         ]
     },
+    {
+        name: servicesInitialConfig.backofficeFrontend.name,
+        envName: servicesInitialConfig.backofficeFrontend.envName, 
+        imageRepo: servicesInitialConfig.backofficeFrontend.repo,
+        port: 80,
+        tech: "react",
+        healthPath: "/_health",
+        policies: [
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+        ],
+        supportedTenants: [
+            {
+                tenant: "backoffice",
+                subdomain: "backoffice.valornetvets.com",
+                customSettings: {
+                    theme: "default-theme",
+                }
+            },
+        ]
+    },
 ];
 
-  
+
 /* EDITAR AQUI quando nascer novo serviço */
-const httpServices: HttpSvc[] = [
+const laravelServices: HttpSvc[] = [
     {
-        name: "auth-service",
+        name: servicesInitialConfig.auth.name,
         envName: "AuthService",
         path: "auth",
         healthPath: "/health",
         port: 9000,
-        imageRepo: "staging-services-auth-service-repo",
-        nginxSidecarImageRepo: "staging-services-auth-service-nginx-repo",
+        imageRepo: servicesInitialConfig.auth.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.auth.sidecarRepo,
         tech: "laravel",
         policies: [
             aws.iam.ManagedPolicy.AmazonSQSFullAccess,
             aws.iam.ManagedPolicy.SecretsManagerReadWrite,
         ]
+    }
+]
+
+const goServices: HttpSvc[] = [
+    {
+        name: servicesInitialConfig.backoffice.name,
+        envName: servicesInitialConfig.backoffice.envName,
+        path: "backoffice",
+        healthPath: "/_health",
+        port: 8080,
+        imageRepo: servicesInitialConfig.backoffice.repo,
+        tech: "go",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+        ]
     },
-];
+]
   
 const workerServices: WorkerSvc[] = [
     {
-        name: "email-service",
-        envName: "EmailWorker",
+        name: servicesInitialConfig.emailService.name,
+        envName: servicesInitialConfig.emailService.envName,
         path: "email",
-        imageRepo: "staging-services-email-service-repo",
+        imageRepo: servicesInitialConfig.emailService.repo,
         policies: [
             aws.iam.ManagedPolicy.AmazonSQSFullAccess,
             aws.iam.ManagedPolicy.SecretsManagerReadWrite,
@@ -103,5 +174,5 @@ const workerServices: WorkerSvc[] = [
     },
 ];
 
-export { frontendServices, httpServices, workerServices };
+export { frontendServices, goServices, laravelServices, servicesInitialConfig, workerServices };
   

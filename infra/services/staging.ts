@@ -3,7 +3,7 @@ import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import * as random from "@pulumi/random";
 
-import { frontendServices, httpServices, workerServices } from "../servicesConfig";
+import { frontendServices, goServices, laravelServices, servicesInitialConfig, workerServices } from "../servicesConfig";
 import { createFrontendTgAndRule, createTgAndRule } from "../shared/alb";
 import { createEcrRepo } from "../shared/ecr";
 import { createEcsTaskRole, createSdService, makeHttpFargate, makeWorkerFargate } from "../shared/ecs";
@@ -13,25 +13,32 @@ import {
 } from "../shared/secrets";
 
 /* Config -------------------------------------------------- */
-const stack                 = pulumi.getStack();
-const core                  = new pulumi.StackReference("organization/infra/staging-core");
-const config                = new pulumi.Config("valornet-infra");
-const vpcId                 = core.getOutput("vpcId");
-const privateSubnetIds      = core.getOutput("privateSubnetIds");
-const publicSubnetIds       = core.getOutput("publicSubnetIds");
-const sgTasksId             = core.getOutput("sgTasksId");
-const sgFrontendId          = core.getOutput("sgFrontendId");
-const listenerArn           = core.getOutput("listenerArn");
-const albArn                = core.getOutput("albArn");
-const frontendAlbArn        = core.getOutput("frontendAlbArn");
-const redisEndpoint         = core.getOutput("redisEndpoint");
-const emailQueue            = core.getOutput("emailQueue");
-const generalSecretArn      = core.getOutput("generalSecretArn");
-const frontendlistenerArn   = core.getOutput("frontendlistenerArn");
-const privDnsNsId           = core.getOutput("privDnsNsId");
-const generalSecret         = pulumi.output(generalSecretArn).apply(arn => aws.secretsmanager.Secret.get("general-secret", arn));
-const caller                = aws.getCallerIdentity({});
-const accountId             = caller.then(c => c.accountId);
+const stack                     = pulumi.getStack();
+const core                      = new pulumi.StackReference("organization/infra/staging-core");
+const config                    = new pulumi.Config("valornet-infra");
+const vpcId                     = core.getOutput("vpcId");
+const privateSubnetIds          = core.getOutput("privateSubnetIds");
+const publicSubnetIds           = core.getOutput("publicSubnetIds");
+const sgTasksId                 = core.getOutput("sgTasksId");
+const sgFrontendId              = core.getOutput("sgFrontendId");
+const listenerArn               = core.getOutput("listenerArn");
+const albArn                    = core.getOutput("albArn");
+const frontendAlbArn            = core.getOutput("frontendAlbArn");
+const redisEndpoint             = core.getOutput("redisEndpoint");
+const emailQueue                = core.getOutput("emailQueue");
+const generalSecretArn          = core.getOutput("generalSecretArn");
+const frontendlistenerArn       = core.getOutput("frontendlistenerArn");
+const frontendHttpListenerArn   = core.getOutput("frontendHttpsListenerArn");
+const privDnsNsId               = core.getOutput("privDnsNsId");
+    
+const rdsEndpoint               = core.getOutput("rdsEndpoint");
+const rdsPort                   = core.getOutput("rdsPort");
+const rdsUsername               = core.getOutput("rdsUsername");
+const rdsPassword               = core.getOutput("rdsPassword");
+    
+const generalSecret             = pulumi.output(generalSecretArn).apply(arn => aws.secretsmanager.Secret.get("general-secret", arn));
+const caller                    = aws.getCallerIdentity({});
+const accountId                 = caller.then(c => c.accountId);
 
 /* ECS Cluster -------------------------------------------------- */
 const cluster = new aws.ecs.Cluster(`${stack}-cluster`, {
@@ -40,19 +47,42 @@ const cluster = new aws.ecs.Cluster(`${stack}-cluster`, {
 
 /* ECR repos -------------------------------------------------- */
 const repoUrls: Record<string, pulumi.Output<string>> = {};
-for (const svc of [...httpServices, ...workerServices, ...frontendServices]) {
-    const repo = createEcrRepo(`${stack}-${svc.name}-repo`, stack, svc);
-    repoUrls[svc.name] = repo.repositoryUrl;
 
-    if (svc.nginxSidecarImageRepo) {
-        const nginxRepo = createEcrRepo(
-            `${stack}-${svc.name}-nginx-repo`,
-            stack,
-            { ...svc, name: `${svc.name}-nginx` }
-        );
-        repoUrls[`${svc.name}-nginx`] = nginxRepo.repositoryUrl;
+for (const svc of Object.entries(servicesInitialConfig)) {
+    const [_, cfg] = svc;
+
+    if (cfg.repo) {
+        const repo = createEcrRepo(`${stack}-${cfg.name}-repo`, stack, cfg);
+        repoUrls[cfg.name] = repo.repositoryUrl;
+    }
+
+    if( cfg.sidecarRepo) {
+        const sidecarRepo = createEcrRepo(`${stack}-${cfg.name}-nginx-repo`, stack, { ...cfg, name: `${cfg.name}-nginx` });
+        repoUrls[`${cfg.name}-nginx`] = sidecarRepo.repositoryUrl;
     }
 }
+
+const getTgAndTaskRole = (
+    svc: { name: string; healthPath?: string, path: string, port: number, policies?: (string | pulumi.Output<string>)[] },
+    targetPort: number,
+    priorityModifier: number = 0
+) => {
+    const tg = createTgAndRule({
+        albArn: albArn,
+        listenerArn: listenerArn,
+        svc: { ...svc, port: targetPort },
+        vpcId: vpcId,
+        priority: 10 + priorityModifier,
+    });
+
+    const taskRole = createEcsTaskRole({
+        name:     `${stack}-${svc.name}`,
+        policies: svc.policies,
+    });
+
+    return { tg, taskRole };
+}
+
 
 /* Services -----------------------------------------------*/
 const laravelAppKey = new random.RandomPassword("app-key", {
@@ -69,29 +99,13 @@ const publicKey = getKeyFromSecretsOrFile("OAUTH_PUBLIC_KEY", "./.keys/staging/o
 const jwtPrivSecret = ensureTextSecret(`private-key-${stack}`, privateKey);
 const jwtPubSecret = ensureTextSecret(`public-key-${stack}`, publicKey);
 
-httpServices.forEach((svc, idx) => {
-
-    // if(svc.name == "crisis-line-service"){
-    //     return;
-    // }
+laravelServices.forEach((svc, idx) => {
 
     const imageTag = config.require(`${svc.name}.imageTag`);
-   
     const targetPort = svc.nginxSidecarImageRepo ? 80 : svc.port;
+
+    const { tg, taskRole } = getTgAndTaskRole(svc, targetPort, idx);
     
-    const tg = createTgAndRule({
-        albArn: albArn,
-        listenerArn: listenerArn,
-        svc: { ...svc, port: targetPort },
-        vpcId: vpcId,
-        priority: 10 + idx,
-    });
-
-    const taskRole = createEcsTaskRole({
-        name:     `${stack}-${svc.name}`,
-        policies: svc.policies,
-    });
-
     const env: Record<string, pulumi.Input<string>> = {
         APP_NAME:            svc.envName,
         APP_ENV:             "staging",
@@ -135,8 +149,44 @@ httpServices.forEach((svc, idx) => {
         nginxSidecarImageRepo: svc.nginxSidecarImageRepo,
         serviceDiscovery
     })
+});
 
-    
+goServices.forEach((svc, idx) => {
+
+    const imageTag = config.require(`${svc.name}.imageTag`);
+    const targetPort = svc.nginxSidecarImageRepo ? 80 : svc.port;
+    const { tg, taskRole } = getTgAndTaskRole(svc, targetPort, (laravelServices.length + idx));
+    const jwtSecret = pulumi.secret(process.env.JWT_SECRET || "PMre11FAx149k2Bt3w5bahK+/CYVtDc7qmB5hOvt8H4=");
+
+    const env: Record<string, pulumi.Input<string>> = {
+        DATABASE_NAME:       "backoffice",
+        DATABASE_HOST:       rdsEndpoint.apply((ep: string) => ep.split(":")[0]),
+        DATABASE_PORT:       pulumi.interpolate`${rdsPort}`,
+        DATABASE_USER:       rdsUsername,
+        DATABASE_PASSWORD:   rdsPassword,
+        REDIS_URL:           pulumi.interpolate`${redisEndpoint}:6379`,
+        SERVER_PORT:         svc.port.toString(),
+        ENVIRONMENT:         "staging",
+
+        AWS_ACCOUNT_ID:      pulumi.interpolate`${accountId}`,
+        AWS_DEFAULT_REGION:  aws.config.requireRegion(),
+        TENANT_SECRET_NAME:  "staging-core-secret",
+
+        JWT_SECRET:          jwtSecret,
+    };
+
+    makeHttpFargate({
+        svc: { name: svc.name, imageRepo: svc.imageRepo, imageTag: imageTag, port: svc.port },
+        clusterArn: cluster.arn,
+        tg,
+        sgIds: [sgTasksId],
+        subnets: privateSubnetIds,
+        taskRole,
+        env,
+        secrets: {},
+        nginxSidecarImageRepo: svc.nginxSidecarImageRepo,
+        serviceDiscovery: undefined
+    })
 });
 
 workerServices.forEach((wsvc) => {
@@ -195,7 +245,7 @@ frontendServices.forEach((svc, idx) => {
     const hostHeaders = svc.supportedTenants.map((t) => t.subdomain);
     const frontendTg = createFrontendTgAndRule({
         albArn:      frontendAlbArn,
-        listenerArn: frontendlistenerArn,
+        listenerArn: frontendHttpListenerArn,
         svc:         { name: svc.name, port: svc.port },
         vpcId:       vpcId,
         priority:    10 + idx,
@@ -216,6 +266,10 @@ frontendServices.forEach((svc, idx) => {
         SUPPORTED_TENANTS:             JSON.stringify(svc.supportedTenants.map((t) => t.tenant)),
         TENANT:                        "demo"
     };
+
+    if(svc.name === "valornet-backoffice-frontend") {
+        env.VITE_API_BASE_URL = "https://stg.valornetvets.com/backoffice/v1";
+    }
 
     const secrets: Record<string, any> = {
         CLIENTS_LIST: generalSecret,
