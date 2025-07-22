@@ -1,24 +1,30 @@
 import * as aws from '@pulumi/aws';
 import { Input, Output } from "@pulumi/pulumi";
 
-export interface HttpSvc {
+export type Policies = (string | Output<string>)[];
+
+export interface Svc {
     name: string;
     envName: string;
-    path: string;
     imageRepo: string;
     nginxSidecarImageRepo?: string;
+}
+
+export interface LambdaSvc extends Svc {
+    policies: Policies;
+    triggeredBy?: string;
+}
+
+export interface HttpSvc extends Svc {
+    path: string;
     port: number;
     tech: string;
-    policies?: (string | Output<string>)[];
+    policies?: Policies;
     healthPath?: string;
 }
   
-export interface WorkerSvc {
-    name: string;
-    envName: string;
+export interface WorkerSvc extends Svc {
     path: string;
-    imageRepo: string;
-    nginxSidecarImageRepo?: string;
     command: Input<string>[];
     policies?: string[];
     cpu?: number;
@@ -40,7 +46,7 @@ export interface FrontendSvc {
     port: number;
     tech: string;
     healthPath: string;
-    policies?: (string | Output<string>)[];
+    policies?: Policies
     supportedTenants: TenantConfig[];
 }
 
@@ -77,6 +83,11 @@ const servicesInitialConfig: Record<string, ServiceInitialConfig> = {
         name: "valornet-backoffice-frontend",
         envName: "ValornetBackofficeFrontend",
         repo: "staging-services-valornet-backoffice-frontend-repo",
+    },
+    fileProcessorLambdaService: {
+        name: "file-processor-lambda-service",
+        envName: "FileProcessorLambdaService",
+        repo: "staging-services-file-processor-lambda-service-repo",
     }
 }
 
@@ -158,6 +169,19 @@ const goServices: HttpSvc[] = [
         ]
     },
 ]
+
+const lambdaServices: LambdaSvc[] = [
+    {
+        name: servicesInitialConfig.fileProcessorLambdaService.name,
+        envName: servicesInitialConfig.fileProcessorLambdaService.envName,
+        imageRepo: servicesInitialConfig.fileProcessorLambdaService.repo,
+        policies: [
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AWSLambdaBasicExecutionRole,
+        ],
+        triggeredBy: "s3",
+    }
+]
   
 const workerServices: WorkerSvc[] = [
     {
@@ -174,5 +198,5 @@ const workerServices: WorkerSvc[] = [
     },
 ];
 
-export { frontendServices, goServices, laravelServices, servicesInitialConfig, workerServices };
+export { frontendServices, goServices, lambdaServices, laravelServices, servicesInitialConfig, workerServices };
   

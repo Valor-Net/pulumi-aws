@@ -3,5 +3,6 @@ config:
   valornet-infra:email-service.imageTag: 7ea12026
   valornet-infra:backoffice-service.imageTag: initial
   valornet-infra:valornet-backoffice-frontend.imageTag: initial
+  valornet-infra:file-processor-lambda-service.imageTag: initial
   valornet-infra:valornet-frontend.imageTag: "9b34c302"
 encryptionsalt: v1:uw0kFASTyV0=:v1:9egG5d7hsTIQQwX8:2a3xPmNztRuGT3GKMkvS/zy2k9kcjg==

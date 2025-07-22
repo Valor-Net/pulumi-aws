@@ -8,7 +8,7 @@ interface TaskRoleOptions {
     inlinePolicies?: aws.iam.RolePolicyArgs[];
 }
 
-function buildImageUrl(repo: string, imageTag: string): pulumi.Output<string> {
+export function buildImageUrl(repo: string, imageTag: string): pulumi.Output<string> {
     const accountId = aws.getCallerIdentity().then(c => c.accountId);
     const region = aws.config.region;
     return pulumi.interpolate`${accountId}.dkr.ecr.${region}.amazonaws.com/${repo}:${imageTag}`;

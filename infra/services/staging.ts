@@ -3,10 +3,11 @@ import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import * as random from "@pulumi/random";
 
-import { frontendServices, goServices, laravelServices, servicesInitialConfig, workerServices } from "../servicesConfig";
+import { frontendServices, goServices, lambdaServices, laravelServices, servicesInitialConfig, workerServices } from "../servicesConfig";
 import { createFrontendTgAndRule, createTgAndRule } from "../shared/alb";
 import { createEcrRepo } from "../shared/ecr";
 import { createEcsTaskRole, createSdService, makeHttpFargate, makeWorkerFargate } from "../shared/ecs";
+import { makeLambdaService } from "../shared/lambda";
 import {
     ensureTextSecret,
     getKeyFromSecretsOrFile
@@ -187,6 +188,58 @@ goServices.forEach((svc, idx) => {
         nginxSidecarImageRepo: svc.nginxSidecarImageRepo,
         serviceDiscovery: undefined
     })
+});
+
+lambdaServices.forEach((svc, idx) => {
+
+    const imageTag = config.require(`${svc.name}.imageTag`);
+
+    const env: Record<string, pulumi.Input<string>> = {
+        ENVIRONMENT:         "staging",
+        S3_BUCKET:           "valornet-assets",
+        S3_PROCESSED_FOLDER: "/processed",
+        S3_ORIGINAL_FOLDER:  "/uploads",
+    };
+
+    const role = new aws.iam.Role(`${svc.name}-lambda-role`, {
+        assumeRolePolicy: aws.iam.assumeRolePolicyForPrincipal({ Service: "lambda.amazonaws.com" }),
+    });
+
+    svc.policies.forEach((policyArn, policyIdx) => {
+        new aws.iam.RolePolicyAttachment(`${svc.name}-policy-${policyIdx}`, {
+            role: role.name,
+            policyArn: policyArn,
+        });
+    });
+
+    const lambda = makeLambdaService({
+        svc: { name: svc.name, imageRepo: svc.imageRepo, imageTag: imageTag },
+        memorySize: 1536,
+        timeout: 900,
+        role,
+        env
+    });
+
+    if(svc.triggeredBy === 's3'){
+        const bucket = aws.s3.Bucket.get("valornet-assets-bucket-ref", "valornet-assets");
+
+        const lambdaPermission = new aws.lambda.Permission(`${svc.name}-s3-permission`, {
+            action: "lambda:InvokeFunction",
+            function: lambda.name,
+            principal: "s3.amazonaws.com",
+            sourceArn: bucket.arn,
+        });
+
+        new aws.s3.BucketNotification(`${svc.name}-bucket-notification`, {
+            bucket: bucket.id,
+            lambdaFunctions: [{
+                lambdaFunctionArn: lambda.arn,
+                events: ["s3:ObjectCreated:*"],
+                filterPrefix: "uploads/",
+            }]
+        }, { dependsOn: [lambdaPermission] });
+
+    }
 });
 
 workerServices.forEach((wsvc) => {
