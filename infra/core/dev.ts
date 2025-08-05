@@ -9,3 +9,9 @@ const devQueue = createQueue({
 });
 
 export const devQueueUrl = devQueue.id;
+
+export function getExports() {
+    return {
+        devQueueUrl: devQueue.id,
+    };
+}
