@@ -123,12 +123,29 @@ const vpceSqs = createVpcInterfaceEndpoint({
 
 
 /* SQS ------------------------------------------------------------*/ 
-const emailQueue = createQueue({
-    name: `${stack}-email-queue`,
+
+
+const emailDlq = createQueue({
+    name: `${stack}-email-dlq`,
     tags: {
         Environment: "staging",
         Project: "valornet"
     }
+});
+
+const emailQueue = createQueue({
+    name: `${stack}-email-queue`,
+    redrivePolicy: emailDlq.arn.apply(dlqArn =>
+        JSON.stringify({
+            deadLetterTargetArn: dlqArn,
+            maxReceiveCount: 3,
+        })
+    ),
+    tags: {
+        Environment: "staging",
+        Project: "valornet"
+    }
+    
 });
 export const devQueueUrl = emailQueue.id;
 

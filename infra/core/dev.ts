@@ -1,17 +1,59 @@
 import { createQueue } from "../shared/sqs";
 
-const devQueue = createQueue({
-    name: "valornet-dev-email-queue",
+
+const emailDlq = createQueue({
+    name: `dev-email-dlq`,
     tags: {
-        Environment: "dev",
+        Environment: "staging",
         Project: "valornet"
     }
 });
 
-export const devQueueUrl = devQueue.id;
+const devEmailQueue = createQueue({
+    name: `valornet-dev-email-queue`,
+    redrivePolicy: emailDlq.arn.apply(dlqArn =>
+        JSON.stringify({
+            deadLetterTargetArn: dlqArn,
+            maxReceiveCount: 3,
+        })
+    ),
+    tags: {
+        Environment: "staging",
+        Project: "valornet"
+    }
+    
+});
+
+const pdfDlq = createQueue({
+    name: `dev-pdf-dlq`,
+    tags: {
+        Environment: "staging",
+        Project: "valornet"
+    }
+});
+
+const devPdfQueue = createQueue({
+    name: `valornet-dev-pdf-queue`,
+    redrivePolicy: pdfDlq.arn.apply(dlqArn =>
+        JSON.stringify({
+            deadLetterTargetArn: dlqArn,
+            maxReceiveCount: 3,
+        })
+    ),
+    tags: {
+        Environment: "staging",
+        Project: "valornet"
+    }
+    
+});
+
+export const devQueueUrl = devEmailQueue.id;
+export const devPdfQueueUrl = devPdfQueue.id;
+
 
 export function getExports() {
     return {
-        devQueueUrl: devQueue.id,
+        devQueueUrl: devEmailQueue.id,
+        devPdfQueueUrl: devPdfQueue.id,
     };
 }
