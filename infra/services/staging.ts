@@ -130,6 +130,7 @@ laravelServices.forEach((svc, idx) => {
     if (svc.path === "auth") {
         secrets.OAUTH_PRIVATE_KEY = jwtPrivSecret;
         secrets.OAUTH_PUBLIC_KEY = jwtPubSecret;
+        env.APP_SECRET = "test-app-secret"
     }
 
     if(svc.path !== 'auth'){
