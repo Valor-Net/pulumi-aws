@@ -60,7 +60,7 @@ export interface ServiceInitialConfig {
 const servicesInitialConfig: Record<string, ServiceInitialConfig> = {
     auth: {
         name: "auth-service",
-        envName: "auth-service",
+        envName: "AuthService",
         repo:"staging-services-auth-service-repo",
         sidecarRepo: "staging-services-auth-service-nginx-repo",
     },
@@ -88,7 +88,43 @@ const servicesInitialConfig: Record<string, ServiceInitialConfig> = {
         name: "file-processor-lambda-service",
         envName: "FileProcessorLambdaService",
         repo: "staging-services-file-processor-lambda-service-repo",
-    }
+    },
+    users: {
+        name: "users-service",
+        envName: "UsersService",
+        repo:"staging-services-users-service-repo",
+        sidecarRepo: "staging-services-users-service-nginx-repo",
+    },
+    brainGames: {
+        name: "brain-games-service",
+        envName: "BrainGamesService",
+        repo:"staging-services-brain-games-service-repo",
+        sidecarRepo: "staging-services-brain-games-service-nginx-repo",
+    },
+    books: {
+        name: "books-service",
+        envName: "BooksService",
+        repo:"staging-services-books-service-repo",
+        sidecarRepo: "staging-services-books-service-nginx-repo",
+    },
+    nutritional: {
+        name: "nutritional-service",
+        envName: "NutritionalService",
+        repo:"staging-services-nutritional-service-repo",
+        sidecarRepo: "staging-services-nutritional-service-nginx-repo",
+    },
+    resourceCenter: {
+        name: "resource-center-service",
+        envName: "ResourceCenterService",
+        repo:"staging-services-resource-center-service-repo",
+        sidecarRepo: "staging-services-resource-center-service-nginx-repo",
+    },
+    relaxingSounds: {
+        name: "relaxing-sounds-service",
+        envName: "RelaxingSoundsService",
+        repo:"staging-services-relaxing-sounds-service-repo",
+        sidecarRepo: "staging-services-relaxing-sounds-service-nginx-repo",
+    },
 }
 
 /* EDITAR AQUI quando nascer novo frontend */
@@ -140,7 +176,7 @@ const frontendServices: FrontendSvc[] = [
 const laravelServices: HttpSvc[] = [
     {
         name: servicesInitialConfig.auth.name,
-        envName: "AuthService",
+        envName: servicesInitialConfig.auth.envName,
         path: "auth",
         healthPath: "/health",
         port: 9000,
@@ -150,6 +186,96 @@ const laravelServices: HttpSvc[] = [
         policies: [
             aws.iam.ManagedPolicy.AmazonSQSFullAccess,
             aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+        ]
+    },
+    {
+        name: servicesInitialConfig.users.name,
+        envName: servicesInitialConfig.users.envName,
+        path: "users",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.users.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.users.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess
+        ]
+    },
+    {
+        name: servicesInitialConfig.brainGames.name,
+        envName: servicesInitialConfig.brainGames.envName,
+        path: "brain-games",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.brainGames.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.brainGames.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess
+        ]
+    },
+    {
+        name: servicesInitialConfig.books.name,
+        envName: servicesInitialConfig.books.envName,
+        path: "books",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.books.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.books.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess
+        ]
+    },
+    {
+        name: servicesInitialConfig.nutritional.name,
+        envName: servicesInitialConfig.nutritional.envName,
+        path: "nutritional",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.nutritional.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.nutritional.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess
+        ]
+    },
+    {
+        name: servicesInitialConfig.resourceCenter.name,
+        envName: servicesInitialConfig.resourceCenter.envName,
+        path: "resource-center",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.resourceCenter.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.resourceCenter.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess
+        ]
+    },
+    {
+        name: servicesInitialConfig.relaxingSounds.name,
+        envName: servicesInitialConfig.relaxingSounds.envName,
+        path: "relaxing-sounds",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.relaxingSounds.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.relaxingSounds.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess
         ]
     }
 ]

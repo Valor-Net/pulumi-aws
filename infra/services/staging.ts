@@ -120,6 +120,7 @@ laravelServices.forEach((svc, idx) => {
         AWS_DEFAULT_REGION:  aws.config.requireRegion(),
         SQS_PREFIX:          pulumi.interpolate`https://sqs.${aws.config.region}.amazonaws.com/${accountId}`,
         SQS_QUEUE:           emailQueue,
+        AWS_BUCKET:          "valornet-assets",
         TENANT_SECRET_NAME:  "staging-core-secret",
     };
 
@@ -134,7 +135,8 @@ laravelServices.forEach((svc, idx) => {
     }
 
     if(svc.path !== 'auth'){
-        env.AUTH_SERVICE_JWKS_URL = pulumi.interpolate`http://auth-service.${stack}.local/auth/v1/.well-known/jwks.json`
+        const firstPartOfStack = stack.split('-')[0];
+        env.AUTH_SERVICE_JWKS_URL = pulumi.interpolate`http://auth-service.${firstPartOfStack}-core.local/auth/v1/.well-known/jwks.json`
     }
 
     const serviceDiscovery = svc.path === 'auth' ? createSdService(svc.name, privDnsNsId) : undefined

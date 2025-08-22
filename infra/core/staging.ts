@@ -147,7 +147,31 @@ const emailQueue = createQueue({
     }
     
 });
+
+const pdfDlq = createQueue({
+    name: `${stack}-pdf-dlq`,
+    tags: {
+        Environment: "staging",
+        Project: "valornet"
+    }
+});
+
+const pdfQueue = createQueue({
+    name: `${stack}-pdf-queue`,
+    redrivePolicy: pdfDlq.arn.apply(dlqArn =>
+        JSON.stringify({
+            deadLetterTargetArn: dlqArn,
+            maxReceiveCount: 3,
+        })
+    ),
+    tags: {
+        Environment: "staging",
+        Project: "valornet"
+    }
+    
+});
 export const devQueueUrl = emailQueue.id;
+export const devPdfQueueUrl = pdfQueue.id;
 
 /* Bastion Host ---------------------------------------- */
 const bastion = createBastionHost(`${stack}-bastion`, {
