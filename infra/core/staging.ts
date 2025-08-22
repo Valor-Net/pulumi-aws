@@ -47,6 +47,9 @@ const sgTasks = createSecurityGroup(`${stack}-task-sg`, vpc.vpc.id, [
     {
         fromPort: 8080, toPort: 8080, protocol: "tcp", securityGroups: [sgAlb.id],
     },
+    {
+        fromPort: 0, toPort: 65535, protocol: "tcp", self: true,
+    },
 ]);
 const sgDb = createSecurityGroup(`${stack}-db-sg`, vpc.vpc.id, [
     {
