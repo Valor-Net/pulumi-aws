@@ -91,6 +91,7 @@ export function makeHttpFargate(args: {
         forceNewDeployment: true,
         cluster: args.clusterArn,
         desiredCount: 1,
+        enableExecuteCommand: true,
         serviceRegistries: args.serviceDiscovery ? {
             registryArn: args.serviceDiscovery.arn,
             containerName: args.nginxSidecarImageRepo ? "web" : args.svc.name,

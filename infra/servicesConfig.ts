@@ -200,7 +200,10 @@ const laravelServices: HttpSvc[] = [
         policies: [
             aws.iam.ManagedPolicy.AmazonSQSFullAccess,
             aws.iam.ManagedPolicy.SecretsManagerReadWrite,
-            aws.iam.ManagedPolicy.AmazonS3FullAccess
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
         ]
     },
     {
@@ -215,7 +218,10 @@ const laravelServices: HttpSvc[] = [
         policies: [
             aws.iam.ManagedPolicy.AmazonSQSFullAccess,
             aws.iam.ManagedPolicy.SecretsManagerReadWrite,
-            aws.iam.ManagedPolicy.AmazonS3FullAccess
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
         ]
     },
     {
@@ -230,7 +236,10 @@ const laravelServices: HttpSvc[] = [
         policies: [
             aws.iam.ManagedPolicy.AmazonSQSFullAccess,
             aws.iam.ManagedPolicy.SecretsManagerReadWrite,
-            aws.iam.ManagedPolicy.AmazonS3FullAccess
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
         ]
     },
     {
@@ -245,7 +254,10 @@ const laravelServices: HttpSvc[] = [
         policies: [
             aws.iam.ManagedPolicy.AmazonSQSFullAccess,
             aws.iam.ManagedPolicy.SecretsManagerReadWrite,
-            aws.iam.ManagedPolicy.AmazonS3FullAccess
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
         ]
     },
     {
@@ -260,7 +272,10 @@ const laravelServices: HttpSvc[] = [
         policies: [
             aws.iam.ManagedPolicy.AmazonSQSFullAccess,
             aws.iam.ManagedPolicy.SecretsManagerReadWrite,
-            aws.iam.ManagedPolicy.AmazonS3FullAccess
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
         ]
     },
     {
@@ -275,7 +290,10 @@ const laravelServices: HttpSvc[] = [
         policies: [
             aws.iam.ManagedPolicy.AmazonSQSFullAccess,
             aws.iam.ManagedPolicy.SecretsManagerReadWrite,
-            aws.iam.ManagedPolicy.AmazonS3FullAccess
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
         ]
     }
 ]
@@ -303,6 +321,7 @@ const lambdaServices: LambdaSvc[] = [
         imageRepo: servicesInitialConfig.fileProcessorLambdaService.repo,
         policies: [
             aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            
             aws.iam.ManagedPolicy.AWSLambdaBasicExecutionRole,
         ],
         triggeredBy: "s3",
