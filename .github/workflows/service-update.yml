@@ -58,6 +58,8 @@ jobs:
         pulumi-version: ^3.0.0
         
     - name: Deploy with Pulumi
+      env:
+        PULUMI_CONFIG_PASSPHRASE: ""
       run: |
         echo "🚀 Iniciando deploy com Pulumi..."
         echo "🏷️ Nova imagem tag: ${{ github.event.inputs.image_tag }}"
