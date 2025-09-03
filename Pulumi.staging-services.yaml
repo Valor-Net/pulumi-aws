@@ -11,7 +11,6 @@ config:
   valornet-infra:nutritional-service.imageTag: initial
   valornet-infra:resource-center-service.imageTag: initial
   valornet-infra:relaxing-sounds-service.imageTag: initial
-
   valornet-infra:readiness-contents-service.imageTag: initial
   valornet-infra:mental-service.imageTag: initial
   valornet-infra:podcasts-service.imageTag: initial
@@ -21,4 +20,5 @@ config:
   valornet-infra:landing-pages-service.imageTag: initial
   valornet-infra:specialty-care-service.imageTag: initial
   valornet-infra:workouts-service.imageTag: initial
+  valornet-infra:auth-service-4d31d9b.imageTag: e6b7ff33
 encryptionsalt: v1:uw0kFASTyV0=:v1:9egG5d7hsTIQQwX8:2a3xPmNztRuGT3GKMkvS/zy2k9kcjg==
