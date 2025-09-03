@@ -73,6 +73,8 @@ jobs:
     - name: Deploy with Pulumi
       env:
         PULUMI_CONFIG_PASSPHRASE: ""
+        OAUTH_PRIVATE_KEY: ${{ secrets.STG_OAUTH_PRIVATE_KEY }}
+        OAUTH_PUBLIC_KEY: ${{ secrets.STG_OAUTH_PUBLIC_KEY }}
       run: |
         echo "🚀 Iniciando deploy com Pulumi..."
         echo "🏷️ Nova imagem tag: ${{ github.event.inputs.image_tag }}"
