@@ -67,6 +67,10 @@ jobs:
         echo "📦 Stack: ${{ github.event.inputs.stack }}"
 
         pulumi login s3://valornet-pulumi-backend
+
+        echo "📦 Instalando dependências do Pulumi..."
+        pulumi install
+        echo "✅ Dependências instaladas!"
         
         # ========================================
         # 1. ATUALIZAR CONFIG DO PULUMI
