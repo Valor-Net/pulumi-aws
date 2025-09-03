@@ -76,8 +76,8 @@ jobs:
         
         CONFIG_KEY="valornet-infra:${{ github.event.inputs.service_name }}.imageTag"
         echo "📝 Atualizando config: ${CONFIG_KEY} = ${{ github.event.inputs.image_tag }}"
-        pulumi config set ${CONFIG_KEY} ${{ github.event.inputs.image_tag }}
-        
+        pulumi config set ${CONFIG_KEY} ${{ github.event.inputs.image_tag }} --stack ${{ github.event.inputs.stack }}
+
         echo "✅ Configuração do Pulumi atualizada!"
 
         echo "⚡ Executando pulumi up..."
