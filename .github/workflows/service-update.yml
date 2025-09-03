@@ -94,15 +94,18 @@ jobs:
         
         # Selecionar stack
         pulumi stack select ${{ github.event.inputs.stack }}
+
+        SERVICE_NAME_BASE=${{ github.event.inputs.service_name }}
+        SERVICE_NAME_BASE=${SERVICE_NAME_BASE%-*}
         
-        CONFIG_KEY="valornet-infra:${{ github.event.inputs.service_name }}.imageTag"
+        CONFIG_KEY="valornet-infra:${SERVICE_NAME_BASE}.imageTag"
         echo "📝 Atualizando config: ${CONFIG_KEY} = ${{ github.event.inputs.image_tag }}"
         pulumi config set ${CONFIG_KEY} ${{ github.event.inputs.image_tag }}
 
         echo "✅ Configuração do Pulumi atualizada!"
 
         echo "⚡ Executando pulumi up..."
-        pulumi up --yes --stack ${{ github.event.inputs.stack }} --target "*${{ github.event.inputs.service_name }}*"
+        pulumi up --yes --stack ${{ github.event.inputs.stack }} --target "*${SERVICE_NAME_BASE}*"
         
         echo "✅ Deploy concluído!"
          # ========================================
@@ -132,5 +135,5 @@ jobs:
         echo "🎉 Processo concluído!"
         echo "📊 Resumo:"
         echo "  - Stack: ${{ github.event.inputs.stack }}"
-        echo "  - Serviço: ${{ github.event.inputs.service_name }}"
+        echo "  - Serviço: ${SERVICE_NAME_BASE}"
         echo "  - Nova tag: ${{ github.event.inputs.image_tag }}"
