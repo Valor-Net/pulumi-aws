@@ -24,15 +24,15 @@ on:
       ecs_cluster:
         description: 'ECS Cluster'
         required: true
-      pulumi_service_name:
-        description: 'Pulumi Service Name'
-        required: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   update-service:
     runs-on: ubuntu-latest
-    environment: staging
-    name: Run ECS update - ${{ github.event.inputs.stack }} - ${{ github.event.inputs.service_name }}
+    name: Deply - ${{ github.event.inputs.stack }} - ${{ github.event.inputs.service_name }}
     permissions:
       contents: write
       id-token: write
@@ -57,37 +57,15 @@ jobs:
       with:
         pulumi-version: ^3.0.0
         
-    - name: Update Pulumi config and ECS Service
+    - name: Deploy with Pulumi
       env:
         PULUMI_CONFIG_PASSPHRASE: ""
         PULUMI_BACKEND_URL: ${{ secrets.PULUMI_BACKEND_URL }}
       run: |
-        echo "🔄 Atualizando imagem do serviço: ${{ github.event.inputs.service_name }}"
+        echo "🚀 Iniciando deploy com Pulumi..."
         echo "🏷️ Nova imagem tag: ${{ github.event.inputs.image_tag }}"
-        
-        # Definir variáveis
-        CLUSTER_NAME="${{ github.event.inputs.ecs_cluster }}"
-        SERVICE_NAME="${{ github.event.inputs.service_name }}"
-        ECR_REPOSITORY="${{ github.event.inputs.ecr_repository }}"
-        ECR_NGINX_REPOSITORY="${{ github.event.inputs.ecr_nginx_repository }}"
-        IMAGE_TAG="${{ github.event.inputs.image_tag }}"
-        STACK_NAME="${{ github.event.inputs.stack }}"
-        
-        # Construir as URIs completas das imagens
-        AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-        APP_IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}"
-        
-        echo "🐳 Nova imagem da aplicação: ${APP_IMAGE_URI}"
-        
-        # Verificar se existe imagem NGINX
-        HAS_NGINX=false
-        if [ -n "${ECR_NGINX_REPOSITORY}" ] && [ "${ECR_NGINX_REPOSITORY}" != "" ]; then
-          HAS_NGINX=true
-          NGINX_IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${ECR_NGINX_REPOSITORY}:${IMAGE_TAG}"
-          echo "🌐 Nova imagem do nginx: ${NGINX_IMAGE_URI}"
-        else
-          echo "ℹ️ Nenhuma imagem NGINX especificada - usando apenas aplicação principal"
-        fi
+        echo "🎯 Serviço: ${{ github.event.inputs.service_name }}"
+        echo "📦 Stack: ${{ github.event.inputs.stack }}"
         
         # ========================================
         # 1. ATUALIZAR CONFIG DO PULUMI
@@ -97,169 +75,42 @@ jobs:
         # Selecionar stack
         pulumi stack select ${STACK_NAME}
         
-        CONFIG_KEY="valornet-infra:${{github.event.inputs.pulumi_service_name}}.imageTag"
-        
-        echo "📝 Atualizando config: ${CONFIG_KEY} = ${IMAGE_TAG}"
-        pulumi config set ${CONFIG_KEY} ${IMAGE_TAG}
+        CONFIG_KEY="valornet-infra:${{ github.event.inputs.service_name }}.imageTag"
+        echo "📝 Atualizando config: ${CONFIG_KEY} = ${{ github.event.inputs.image_tag }}"
+        pulumi config set ${CONFIG_KEY} ${{ github.event.inputs.image_tag }}
         
         echo "✅ Configuração do Pulumi atualizada!"
-        
-        # ========================================
-        # 2. ATUALIZAR ECS SERVICE
-        # ========================================
-        echo "🚀 Atualizando serviço ECS..."
 
-        echo "cluster: ${{github.event.inputs.ecs_cluster}}"
-        echo "service: ${{github.event.inputs.service_name}}"
+        echo "⚡ Executando pulumi up..."
+        pulumi up --yes --stack ${{ github.event.inputs.stack }} --target "*${{ github.event.inputs.service_name }}*"
         
-        # Obter a task definition atual
-        echo "📋 Obtendo task definition atual..."
-        TASK_DEFINITION_ARN=$(aws ecs describe-services \
-          --cluster ${{github.event.inputs.ecs_cluster}} \
-          --services ${{github.event.inputs.service_name}} \
-          --query 'services[0].taskDefinition' \
-          --output text)
-        
-        echo "📄 Task Definition ARN: ${TASK_DEFINITION_ARN}"
-        
-        # Baixar a task definition atual
-        aws ecs describe-task-definition \
-          --task-definition ${TASK_DEFINITION_ARN} \
-          --query 'taskDefinition' \
-          --output json > task-definition.json
-        
-        # Atualizar as imagens na task definition
-        echo "🔧 Atualizando imagens na task definition..."
-        
-        # Mostrar containers atuais para debug
-        echo "📊 Containers atuais:"
-        jq -r '.containerDefinitions[] | "  - \(.name): \(.image)"' task-definition.json
-        
-        # Lógica condicional baseada na presença do NGINX
-        if [ "${HAS_NGINX}" = true ]; then
-          echo "🌐 Modo com NGINX - Atualizando containers 'php' e 'web'"
-          # Com NGINX: 'php' = aplicação principal, 'web' = nginx
-          jq --arg APP_IMAGE_URI "${APP_IMAGE_URI}" \
-             --arg NGINX_IMAGE_URI "${NGINX_IMAGE_URI}" '
-             .containerDefinitions = (.containerDefinitions | map(
-               if .name == "php" then
-                 .image = $APP_IMAGE_URI
-               elif .name == "web" then
-                 .image = $NGINX_IMAGE_URI
-               else
-                 .
-               end
-             )) |
-             del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .placementConstraints, .compatibilities, .registeredAt, .registeredBy)' \
-            task-definition.json > new-task-definition.json
-        else
-          echo "🔧 Modo sem NGINX - Verificando containers disponíveis..."
-          
-          # Verificar quais containers existem
-          CONTAINERS=$(jq -r '.containerDefinitions[].name' task-definition.json)
-          echo "📋 Containers encontrados: ${CONTAINERS}"
-          
-          # Determinar qual container atualizar
-          if echo "${CONTAINERS}" | grep -q "worker"; then
-            echo "👷 Container 'worker' encontrado - atualizando como principal"
-            TARGET_CONTAINER="worker"
-          elif echo "${CONTAINERS}" | grep -q "web"; then
-            echo "🌐 Container 'web' encontrado - atualizando como principal"
-            TARGET_CONTAINER="web"
-          else
-            echo "❌ Erro: Nenhum container conhecido encontrado (worker/web)"
-            exit 1
-          fi
-          
-          # Atualizar apenas o container principal
-          jq --arg APP_IMAGE_URI "${APP_IMAGE_URI}" \
-             --arg TARGET_CONTAINER "${TARGET_CONTAINER}" '
-             .containerDefinitions = (.containerDefinitions | map(
-               if .name == $TARGET_CONTAINER then
-                 .image = $APP_IMAGE_URI
-               else
-                 .
-               end
-             )) |
-             del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .placementConstraints, .compatibilities, .registeredAt, .registeredBy)' \
-            task-definition.json > new-task-definition.json
-        fi
-        
-        echo "📋 Nova task definition (containers):"
-        jq -r '.containerDefinitions[] | "  - \(.name): \(.image)"' new-task-definition.json
-        
-        # Registrar nova task definition
-        echo "📝 Registrando nova task definition..."
-        NEW_TASK_DEFINITION_ARN=$(aws ecs register-task-definition \
-          --cli-input-json file://new-task-definition.json \
-          --query 'taskDefinition.taskDefinitionArn' \
-          --output text)
-        
-        echo "✅ Nova task definition registrada: ${NEW_TASK_DEFINITION_ARN}"
-        
-        # Atualizar o serviço com a nova task definition
-        echo "🚀 Atualizando serviço..."
-        aws ecs update-service \
-          --cluster ${CLUSTER_NAME} \
-          --service ${SERVICE_NAME} \
-          --task-definition ${NEW_TASK_DEFINITION_ARN} \
-          --force-new-deployment
-        
-        
+        echo "✅ Deploy concluído!"
+         # ========================================
+        # COMMIT MUDANÇAS
         # ========================================
-        # 3. REFRESH PULUMI STATE (SINCRONIZAR COM REALIDADE)
-        # ========================================
-        echo "🔄 Executando Pulumi refresh para sincronizar estado..."
-        echo "📝 Isso vai atualizar o state file com as mudanças feitas diretamente no AWS"
+        echo "💾 Fazendo commit das mudanças..."
         
-        # Fazer refresh do estado para evitar drift
-        if pulumi refresh --yes --stack "${STACK_NAME}"; then
-          echo "✅ Pulumi state atualizado com sucesso!"
-          echo "📊 Estado sincronizado entre Pulumi e AWS"
-        else
-          echo "⚠️ Aviso: Falha no pulumi refresh, mas deployment foi concluído"
-          echo "💡 Considere executar 'pulumi refresh' manualmente depois"
-        fi
-
-        # ========================================
-        # 4. COMMIT MUDANÇAS DO PULUMI
-        # ========================================
-        echo "💾 Fazendo commit das mudanças na configuração..."
+        git config --global user.email "ci@valornet.com"
+        git config --global user.name "CI/CD Bot"
         
         # Verificar se há mudanças
         if git diff --quiet; then
           echo "ℹ️ Nenhuma mudança para commit"
         else
-          git config --global user.email "ci@valornet.com"
-          git config --global user.name "CI/CD Bot"
+          git add Pulumi.${{ github.event.inputs.stack }}.yaml
           
-          git add Pulumi.${STACK_NAME}.yaml
+          git commit -m "🤖 ci: deploy ${{ github.event.inputs.service_name }} with tag ${{ github.event.inputs.image_tag }}
           
-          # Commit message condicional
-          if [ "${HAS_NGINX}" = true ]; then
-            git commit -m "🤖 ci: update ${SERVICE_NAME} imageTag to ${IMAGE_TAG} (app + nginx)"
-          else
-            git commit -m "🤖 ci: update ${SERVICE_NAME} imageTag to ${IMAGE_TAG} (app only)"
-          fi
+          📦 Stack: ${{ github.event.inputs.stack }}
+          🏷️ Image Tag: ${{ github.event.inputs.image_tag }}
+          📝 Commit SHA: ${{ github.event.inputs.commit_sha }}"
           
-          # Push mudanças
           git push origin main
-          
-          echo "✅ Configuração commitada e enviada!"
+          echo "✅ Configuração commitada!"
         fi
         
-        echo "🎉 Processo concluído com sucesso!"
+        echo "🎉 Processo concluído!"
         echo "📊 Resumo:"
-        echo "  - Config Pulumi: ✅ Atualizada"
-        echo "  - ECS Service: ✅ Atualizado"
-        echo "  - Serviço: ${SERVICE_NAME}"
-        echo "  - Nova tag: ${IMAGE_TAG}"
-        echo "  - Imagem da aplicação: ${APP_IMAGE_URI}"
-        
-        if [ "${HAS_NGINX}" = true ]; then
-          echo "  - Imagem do nginx: ${NGINX_IMAGE_URI}"
-          echo "  - Containers atualizados: php, web"
-        else
-          echo "  - Modo: Sem NGINX"
-          echo "  - Container atualizado: ${TARGET_CONTAINER:-'detectado automaticamente'}"
-        fi
+        echo "  - Stack: ${{ github.event.inputs.stack }}"
+        echo "  - Serviço: ${{ github.event.inputs.service_name }}"
+        echo "  - Nova tag: ${{ github.event.inputs.image_tag }}"

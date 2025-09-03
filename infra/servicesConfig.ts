@@ -125,6 +125,61 @@ const servicesInitialConfig: Record<string, ServiceInitialConfig> = {
         repo:"staging-services-relaxing-sounds-service-repo",
         sidecarRepo: "staging-services-relaxing-sounds-service-nginx-repo",
     },
+
+    spiritual: {
+        name: "spiritual-service",
+        envName: "SpiritualService",
+        repo:"staging-services-spiritual-service-repo",
+        sidecarRepo: "staging-services-spiritual-service-nginx-repo",
+    },
+    mental: {
+        name: "mental-service",
+        envName: "MentalService",
+        repo:"staging-services-mental-service-repo",
+        sidecarRepo: "staging-services-mental-service-nginx-repo",
+    },
+    specialtyCare: {
+        name: "specialty-care-service",
+        envName: "SpecialtyCareService",
+        repo:"staging-services-specialty-care-service-repo",
+        sidecarRepo: "staging-services-specialty-care-service-nginx-repo",
+    },
+    landingPages: {
+        name: "landing-pages-service",
+        envName: "LandingPagesService",
+        repo:"staging-services-landing-pages-service-repo",
+        sidecarRepo: "staging-services-landing-pages-service-nginx-repo",
+    },
+    podcasts: {
+        name: "podcasts-service",
+        envName: "PodcastsService",
+        repo:"staging-services-podcasts-service-repo",
+        sidecarRepo: "staging-services-podcasts-service-nginx-repo",
+    },
+    workouts: {
+        name: "workouts-service",
+        envName: "WorkoutsService",
+        repo:"staging-services-workouts-service-repo",
+        sidecarRepo: "staging-services-workouts-service-nginx-repo",
+    },
+    meditations: {
+        name: "meditations-service",
+        envName: "MeditationsService",
+        repo:"staging-services-meditations-service-repo",
+        sidecarRepo: "staging-services-meditations-service-nginx-repo",
+    },
+    sleep: {
+        name: "sleep-service",
+        envName: "SleepService",
+        repo:"staging-services-sleep-service-repo",
+        sidecarRepo: "staging-services-sleep-service-nginx-repo",
+    },
+    readinessContents: {
+        name: "readiness-contents-service",
+        envName: "ReadinessContentsService",
+        repo:"staging-services-readiness-contents-service-repo",
+        sidecarRepo: "staging-services-readiness-contents-service-nginx-repo",
+    }
 }
 
 /* EDITAR AQUI quando nascer novo frontend */
@@ -295,7 +350,172 @@ const laravelServices: HttpSvc[] = [
             aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
 
         ]
-    }
+    },
+
+    {
+        name: servicesInitialConfig.spiritual.name,
+        envName: servicesInitialConfig.spiritual.envName,
+        path: "spiritual",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.spiritual.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.spiritual.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
+        ]
+    },
+    {
+        name: servicesInitialConfig.mental.name,
+        envName: servicesInitialConfig.mental.envName,
+        path: "mental",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.mental.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.mental.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
+        ]
+    },
+    {
+        name: servicesInitialConfig.specialtyCare.name,
+        envName: servicesInitialConfig.specialtyCare.envName,
+        path: "specialty-care",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.specialtyCare.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.specialtyCare.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
+        ]
+    },
+    {
+        name: servicesInitialConfig.landingPages.name,
+        envName: servicesInitialConfig.landingPages.envName,
+        path: "landing-pages",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.landingPages.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.landingPages.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
+        ]
+    },
+    {
+        name: servicesInitialConfig.podcasts.name,
+        envName: servicesInitialConfig.podcasts.envName,
+        path: "podcasts",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.podcasts.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.podcasts.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
+        ]
+    },
+    {
+        name: servicesInitialConfig.workouts.name,
+        envName: servicesInitialConfig.workouts.envName,
+        path: "workouts",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.workouts.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.workouts.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
+        ]
+    },
+    {
+        name: servicesInitialConfig.meditations.name,
+        envName: servicesInitialConfig.meditations.envName,
+        path: "meditations",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.meditations.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.meditations.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
+        ]
+    },
+    {
+        name: servicesInitialConfig.sleep.name,
+        envName: servicesInitialConfig.sleep.envName,
+        path: "sleep",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.sleep.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.sleep.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
+        ]
+    },
+    {
+        name: servicesInitialConfig.readinessContents.name,
+        envName: servicesInitialConfig.readinessContents.envName,
+        path: "readiness-content",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.readinessContents.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.readinessContents.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
+        ]
+    },
+    
+
 ]
 
 const goServices: HttpSvc[] = [

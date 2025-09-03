@@ -122,6 +122,9 @@ laravelServices.forEach((svc, idx) => {
         SQS_QUEUE:           emailQueue,
         AWS_BUCKET:          "valornet-assets",
         TENANT_SECRET_NAME:  "staging-core-secret",
+        DB_CONNECTION:       "mysql",
+        FILESYSTEM_DISK:     "s3",
+        CACHE_STORE:         "file",
     };
 
     const secrets: Record<string, aws.secretsmanager.Secret> = svc.tech === 'laravel' ? {
