@@ -51,6 +51,14 @@ jobs:
       with:
         token: ${{ secrets.INFRA_REPO_TOKEN }}
         persist-credentials: true 
+    - name: Setup Node.js and PNPM
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'pnpm'
+     
+    - name: Install PNPM
+      run: npm install -g pnpm
       
     - name: Setup Pulumi
       uses: pulumi/actions@v4
