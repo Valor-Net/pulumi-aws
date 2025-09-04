@@ -12,7 +12,7 @@ config:
   valornet-infra:resource-center-service.imageTag: initial
   valornet-infra:relaxing-sounds-service.imageTag: initial
   valornet-infra:readiness-contents-service.imageTag: initial
-  valornet-infra:mental-service.imageTag: initial
+  valornet-infra:mental-service.imageTag: 349d233b
   valornet-infra:podcasts-service.imageTag: initial
   valornet-infra:meditations-service.imageTag: initial
   valornet-infra:sleep-service.imageTag: initial
