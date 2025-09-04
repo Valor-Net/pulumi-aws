@@ -179,6 +179,23 @@ const servicesInitialConfig: Record<string, ServiceInitialConfig> = {
         envName: "ReadinessContentsService",
         repo:"staging-services-readiness-contents-service-repo",
         sidecarRepo: "staging-services-readiness-contents-service-nginx-repo",
+    },
+    chat: {
+        name: "chat-service",
+        envName: "ChatService",
+        repo:"staging-services-chat-service-repo",
+        sidecarRepo: "staging-services-chat-service-nginx-repo",
+    },
+    classes: {
+        name: "classes-service",
+        envName: "ClassesService",
+        repo:"staging-services-classes-service-repo",
+        sidecarRepo: "staging-services-classes-service-nginx-repo",
+    },
+    pdfGeneratorService: {
+        name: "pdf-generator-service",
+        envName: "PdfGeneratorWorker",
+        repo:"staging-services-pdf-generator-service-repo",
     }
 }
 
@@ -514,6 +531,42 @@ const laravelServices: HttpSvc[] = [
 
         ]
     },
+    {
+        name: servicesInitialConfig.chat.name,
+        envName: servicesInitialConfig.chat.envName,
+        path: "chat",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.chat.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.chat.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
+        ]
+    },
+    {
+        name: servicesInitialConfig.classes.name,
+        envName: servicesInitialConfig.classes.envName,
+        path: "classes",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.classes.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.classes.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
+        ]
+    },
     
 
 ]
@@ -560,6 +613,18 @@ const workerServices: WorkerSvc[] = [
             aws.iam.ManagedPolicy.AmazonSESFullAccess,
         ],
         command: ["php", "artisan", "sqs:consume-email"]
+    },
+    {
+        name: servicesInitialConfig.pdfGeneratorService.name,
+        envName: servicesInitialConfig.pdfGeneratorService.envName,
+        path: "pdf-generator",
+        imageRepo: servicesInitialConfig.pdfGeneratorService.repo,
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonSESFullAccess,
+        ],
+        command: ["php", "artisan", "queue:work", "pdf_raw_sqs", "--sleep=3", "--daemon", "--max-jobs=1000", "--max-time=3600"]
     },
 ];
 
