@@ -611,6 +611,9 @@ const workerServices: WorkerSvc[] = [
             aws.iam.ManagedPolicy.AmazonSQSFullAccess,
             aws.iam.ManagedPolicy.SecretsManagerReadWrite,
             aws.iam.ManagedPolicy.AmazonSESFullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
         ],
         command: ["php", "artisan", "sqs:consume-email"]
     },
@@ -623,6 +626,8 @@ const workerServices: WorkerSvc[] = [
             aws.iam.ManagedPolicy.AmazonSQSFullAccess,
             aws.iam.ManagedPolicy.SecretsManagerReadWrite,
             aws.iam.ManagedPolicy.AmazonSESFullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
         ],
         command: ["php", "artisan", "queue:work", "pdf_raw_sqs", "--sleep=3", "--daemon", "--max-jobs=1000", "--max-time=3600"]
     },

@@ -27,6 +27,7 @@ const albArn                    = core.getOutput("albArn");
 const frontendAlbArn            = core.getOutput("frontendAlbArn");
 const redisEndpoint             = core.getOutput("redisEndpoint");
 const emailQueue                = core.getOutput("emailQueue");
+const pdfQueue                  = core.getOutput("pdfQueue");
 const generalSecretArn          = core.getOutput("generalSecretArn");
 const frontendlistenerArn       = core.getOutput("frontendlistenerArn");
 const frontendHttpListenerArn   = core.getOutput("frontendHttpsListenerArn");
@@ -120,6 +121,8 @@ laravelServices.forEach((svc, idx) => {
         AWS_DEFAULT_REGION:  aws.config.requireRegion(),
         SQS_PREFIX:          pulumi.interpolate`https://sqs.${aws.config.region}.amazonaws.com/${accountId}`,
         SQS_QUEUE:           emailQueue,
+        SQS_EMAIL_QUEUE:     emailQueue,
+        SQS_PDF_QUEUE:       pdfQueue,
         AWS_BUCKET:          "valornet-assets",
         TENANT_SECRET_NAME:  "staging-core-secret",
         DB_CONNECTION:       "mysql",
@@ -269,9 +272,14 @@ workerServices.forEach((wsvc) => {
         AWS_DEFAULT_REGION:  aws.config.requireRegion(),
         SQS_PREFIX:          pulumi.interpolate`https://sqs.${aws.config.region}.amazonaws.com/${accountId}`,
         SQS_QUEUE:           emailQueue,
+        SQS_EMAIL_QUEUE:     emailQueue,
+        SQS_PDF_QUEUE:       pdfQueue,
         MAIL_MAILER:         "ses",
         MAIL_FROM_ADDRESS:   "no-reply@valornetvets.com",
-        MAIL_FROM_NAME:      "ValorNet"
+        MAIL_FROM_NAME:      "ValorNet",
+        FILESYSTEM_DISK:     "s3",
+        DB_CONNECTION:       "mysql",
+        CACHE_STORE:         "file"
     };
 
     if (wsvc.path !== "auth") {

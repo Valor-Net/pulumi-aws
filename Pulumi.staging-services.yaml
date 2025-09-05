@@ -1,26 +1,26 @@
 config:
   valornet-infra:auth-service.imageTag: "ac8a00a3"
-  valornet-infra:email-service.imageTag: 86dc1708
+  valornet-infra:email-service.imageTag: test
   valornet-infra:backoffice-service.imageTag: initial
   valornet-infra:valornet-backoffice-frontend.imageTag: initial
   valornet-infra:file-processor-lambda-service.imageTag: twelve
   valornet-infra:valornet-frontend.imageTag: "dd30ddcc"
-  valornet-infra:users-service.imageTag: 9004c512
-  valornet-infra:brain-games-service.imageTag: initial
-  valornet-infra:books-service.imageTag: initial
-  valornet-infra:nutritional-service.imageTag: initial
-  valornet-infra:resource-center-service.imageTag: initial
-  valornet-infra:relaxing-sounds-service.imageTag: initial
-  valornet-infra:readiness-contents-service.imageTag: initial
-  valornet-infra:mental-service.imageTag: 349d233b
-  valornet-infra:podcasts-service.imageTag: initial
-  valornet-infra:meditations-service.imageTag: initial
-  valornet-infra:sleep-service.imageTag: initial
-  valornet-infra:spiritual-service.imageTag: initial
-  valornet-infra:landing-pages-service.imageTag: initial
-  valornet-infra:specialty-care-service.imageTag: 13c4f256
-  valornet-infra:workouts-service.imageTag: initial
-  valornet-infra:chat-service.imageTag: initial
-  valornet-infra:classes-service.imageTag: initial
-  valornet-infra:pdf-generator-service.imageTag: initial
+  valornet-infra:users-service.imageTag: latest
+  valornet-infra:brain-games-service.imageTag: latest
+  valornet-infra:books-service.imageTag: latest
+  valornet-infra:nutritional-service.imageTag: latest
+  valornet-infra:resource-center-service.imageTag: latest
+  valornet-infra:relaxing-sounds-service.imageTag: latest
+  valornet-infra:readiness-contents-service.imageTag: latest
+  valornet-infra:mental-service.imageTag: latest
+  valornet-infra:podcasts-service.imageTag: latest
+  valornet-infra:meditations-service.imageTag: latest
+  valornet-infra:sleep-service.imageTag: latest
+  valornet-infra:spiritual-service.imageTag: latest
+  valornet-infra:landing-pages-service.imageTag: latest
+  valornet-infra:specialty-care-service.imageTag: latest
+  valornet-infra:workouts-service.imageTag: latest
+  valornet-infra:chat-service.imageTag: latest
+  valornet-infra:classes-service.imageTag: latest
+  valornet-infra:pdf-generator-service.imageTag: abc
 encryptionsalt: v1:uw0kFASTyV0=:v1:9egG5d7hsTIQQwX8:2a3xPmNztRuGT3GKMkvS/zy2k9kcjg==

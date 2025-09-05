@@ -317,6 +317,7 @@ export function getExports() {
         vpceSqsId: vpceSqs.id,
         vpceSqsDns: vpceSqs.dnsEntries,
         emailQueue: emailQueue.name,
+        pdfQueue: pdfQueue.name,
         generalSecretArn: clientsSecret.arn,
         privDnsNsId: privateDnsNs.id,
         rdsPassword: pulumi.secret(dbPassword),
