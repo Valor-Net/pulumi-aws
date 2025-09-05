@@ -18,7 +18,7 @@ config:
   valornet-infra:sleep-service.imageTag: initial
   valornet-infra:spiritual-service.imageTag: initial
   valornet-infra:landing-pages-service.imageTag: initial
-  valornet-infra:specialty-care-service.imageTag: initial
+  valornet-infra:specialty-care-service.imageTag: 13c4f256
   valornet-infra:workouts-service.imageTag: initial
   valornet-infra:chat-service.imageTag: initial
   valornet-infra:classes-service.imageTag: initial
