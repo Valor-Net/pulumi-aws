@@ -23,4 +23,5 @@ config:
   valornet-infra:chat-service.imageTag: ffd6ba64
   valornet-infra:classes-service.imageTag: latest
   valornet-infra:pdf-generator-service.imageTag: abc
+  valornet-infra:pdf-generator-service-worker.imageTag: 0972cc6c
 encryptionsalt: v1:uw0kFASTyV0=:v1:9egG5d7hsTIQQwX8:2a3xPmNztRuGT3GKMkvS/zy2k9kcjg==
