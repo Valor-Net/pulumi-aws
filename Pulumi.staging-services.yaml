@@ -5,7 +5,7 @@ config:
   valornet-infra:valornet-backoffice-frontend.imageTag: initial
   valornet-infra:file-processor-lambda-service.imageTag: twelve
   valornet-infra:valornet-frontend.imageTag: "dd30ddcc"
-  valornet-infra:users-service.imageTag: a30c109c
+  valornet-infra:users-service.imageTag: a52e2298
   valornet-infra:brain-games-service.imageTag: latest
   valornet-infra:books-service.imageTag: latest
   valornet-infra:nutritional-service.imageTag: latest
