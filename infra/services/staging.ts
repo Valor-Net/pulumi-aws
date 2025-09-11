@@ -28,6 +28,7 @@ const frontendAlbArn            = core.getOutput("frontendAlbArn");
 const redisEndpoint             = core.getOutput("redisEndpoint");
 const emailQueue                = core.getOutput("emailQueue");
 const pdfQueue                  = core.getOutput("pdfQueue");
+const notificationsQueue        = core.getOutput("notificationsQueue");
 const generalSecretArn          = core.getOutput("generalSecretArn");
 const frontendlistenerArn       = core.getOutput("frontendlistenerArn");
 const frontendHttpListenerArn   = core.getOutput("frontendHttpsListenerArn");
@@ -145,6 +146,10 @@ laravelServices.forEach((svc, idx) => {
         env.AUTH_SERVICE_JWKS_URL = pulumi.interpolate`http://auth-service.${firstPartOfStack}-core.local/auth/v1/.well-known/jwks.json`
     }
 
+    if(svc.path === 'call-request'){
+        env.SQS_NOTIFICATIONS_QUEUE = notificationsQueue;
+    }
+
     const serviceDiscovery = svc.path === 'auth' ? createSdService(svc.name, privDnsNsId) : undefined
 
     makeHttpFargate({
@@ -260,26 +265,27 @@ workerServices.forEach((wsvc) => {
     });
 
     const env: Record<string, pulumi.Input<string>> = {
-        APP_NAME:            wsvc.envName,
-        APP_ENV:             "staging",
-        APP_DEBUG:           "false",
-        APP_URL:             "https://stg.valornetvets.com",
-        QUEUE_CONNECTION:    "sqs",
-        REDIS_CLIENT:        "phpredis",
-        REDIS_HOST:          redisEndpoint,
-        REDIS_PORT:          "6379",
-        AWS_ACCOUNT_ID:      pulumi.interpolate`${accountId}`,
-        AWS_DEFAULT_REGION:  aws.config.requireRegion(),
-        SQS_PREFIX:          pulumi.interpolate`https://sqs.${aws.config.region}.amazonaws.com/${accountId}`,
-        SQS_QUEUE:           emailQueue,
-        SQS_EMAIL_QUEUE:     emailQueue,
-        SQS_PDF_QUEUE:       pdfQueue,
-        MAIL_MAILER:         "ses",
-        MAIL_FROM_ADDRESS:   "no-reply@valornetvets.com",
-        MAIL_FROM_NAME:      "ValorNet",
-        FILESYSTEM_DISK:     "s3",
-        DB_CONNECTION:       "mysql",
-        CACHE_STORE:         "file"
+        APP_NAME:                   wsvc.envName,
+        APP_ENV:                    "staging",
+        APP_DEBUG:                  "false",
+        APP_URL:                    "https://stg.valornetvets.com",
+        QUEUE_CONNECTION:           "sqs",
+        REDIS_CLIENT:               "phpredis",
+        REDIS_HOST:                 redisEndpoint,
+        REDIS_PORT:                 "6379",
+        AWS_ACCOUNT_ID:             pulumi.interpolate`${accountId}`,
+        AWS_DEFAULT_REGION:         aws.config.requireRegion(),
+        SQS_PREFIX:                 pulumi.interpolate`https://sqs.${aws.config.region}.amazonaws.com/${accountId}`,
+        SQS_QUEUE:                  emailQueue,
+        SQS_EMAIL_QUEUE:            emailQueue,
+        SQS_PDF_QUEUE:              pdfQueue,
+        SQS_NOTIFICATIONS_QUEUE:    notificationsQueue,
+        MAIL_MAILER:                "ses",
+        MAIL_FROM_ADDRESS:          "no-reply@valornetvets.com",
+        MAIL_FROM_NAME:             "ValorNet",
+        FILESYSTEM_DISK:            "s3",
+        DB_CONNECTION:              "mysql",
+        CACHE_STORE:                "file"
     };
 
     if (wsvc.path !== "auth") {

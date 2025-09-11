@@ -7,7 +7,7 @@ import { createAlbIntegration, createApiMapping, createDomainName, createHttpApi
 import { createBastionHost } from "../shared/bastion";
 import { createRedisCluster } from "../shared/elastiCache";
 import { createRdsInstance } from "../shared/rds";
-import { createJsonSecret, createManagedSecret, getTenantCustomSettings } from "../shared/secrets";
+import { createJsonSecret, createManagedSecret, ensureSecret, getTenantCustomSettings } from "../shared/secrets";
 import { createSecurityGroup } from "../shared/securityGroups";
 import { createQueue } from "../shared/sqs";
 import { createVpc, createVpcInterfaceEndpoint } from "../shared/vpc";
@@ -125,7 +125,28 @@ const vpceSqs = createVpcInterfaceEndpoint({
 });
 
 
-/* SQS ------------------------------------------------------------*/ 
+/* SQS ------------------------------------------------------------*/
+
+const notificationsDlq = createQueue({
+    name: `${stack}-notifications-dlq`,
+    tags: {
+        Environment: "staging",
+        Project: "valornet"
+    }
+});
+const notificationsQueue = createQueue({
+    name: `${stack}-notifications-queue`,
+    redrivePolicy: notificationsDlq.arn.apply(dlqArn =>
+        JSON.stringify({
+            deadLetterTargetArn: dlqArn,
+            maxReceiveCount: 3,
+        })
+    ),
+    tags: {
+        Environment: "staging",
+        Project: "valornet"
+    }
+});
 
 
 const emailDlq = createQueue({
@@ -135,7 +156,6 @@ const emailDlq = createQueue({
         Project: "valornet"
     }
 });
-
 const emailQueue = createQueue({
     name: `${stack}-email-queue`,
     redrivePolicy: emailDlq.arn.apply(dlqArn =>
@@ -158,7 +178,6 @@ const pdfDlq = createQueue({
         Project: "valornet"
     }
 });
-
 const pdfQueue = createQueue({
     name: `${stack}-pdf-queue`,
     redrivePolicy: pdfDlq.arn.apply(dlqArn =>
@@ -242,6 +261,8 @@ initialTenants.forEach(tenantName => {
         finalSettings,
         `Secret for tenant ${tenantName} - managed by TenantProviderService`
     );
+
+    ensureSecret(`${stack}-${tenantName}-notifications-data`, `${tenantName} Notifications secret - managed by NotificationsService`);
 });
 const generalSecretData = pulumi.all([rds.endpoint, rds.port, dbPassword, bastion.publicIp, bastion.publicDns, redis.cacheNodes]).apply(([endpoint, port, password, bastionIp, bastionDns, redisNode]) => ({
     host: endpoint,
@@ -317,6 +338,7 @@ export function getExports() {
         vpceSqsId: vpceSqs.id,
         vpceSqsDns: vpceSqs.dnsEntries,
         emailQueue: emailQueue.name,
+        notificationsQueue: notificationsQueue.name,
         pdfQueue: pdfQueue.name,
         generalSecretArn: clientsSecret.arn,
         privDnsNsId: privateDnsNs.id,

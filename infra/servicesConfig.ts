@@ -196,6 +196,23 @@ const servicesInitialConfig: Record<string, ServiceInitialConfig> = {
         name: "pdf-generator-service",
         envName: "PdfGeneratorWorker",
         repo:"staging-services-pdf-generator-service-repo",
+    },
+    notifications: {
+        name: "notifications-service",
+        envName: "NotificationsWorker",
+        repo:"staging-services-notifications-service-repo",
+    },
+    callRequest: {
+        name: "call-request-service",
+        envName: "CallRequestService",
+        repo:"staging-services-call-request-service-repo",
+        sidecarRepo: "staging-services-call-request-service-nginx-repo",
+    },
+    telemedicine: {
+        name: "telemedicine-service",
+        envName: "TelemedicineService",
+        repo:"staging-services-telemedicine-service-repo",
+        sidecarRepo: "staging-services-telemedicine-service-nginx-repo",
     }
 }
 
@@ -567,7 +584,24 @@ const laravelServices: HttpSvc[] = [
 
         ]
     },
-    
+    {
+        name: servicesInitialConfig.callRequest.name,
+        envName: servicesInitialConfig.callRequest.envName,
+        path: "call-request",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.callRequest.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.callRequest.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
+        ]
+    },
 
 ]
 
@@ -630,6 +664,20 @@ const workerServices: WorkerSvc[] = [
             aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
         ],
         command: ["php", "artisan", "queue:work", "pdf_raw_sqs", "--sleep=3", "--daemon", "--max-jobs=1000", "--max-time=3600"]
+    },
+    {
+        name: servicesInitialConfig.notifications.name,
+        envName: servicesInitialConfig.notifications.envName,
+        path: "notifications",
+        imageRepo: servicesInitialConfig.notifications.repo,
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonSESFullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+        ],
+        command: ["php", "artisan", "queue:work", "raw_sqs", "--sleep=3", "--daemon", "--max-jobs=1000", "--max-time=3600"]
     },
 ];
 
