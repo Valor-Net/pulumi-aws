@@ -20,7 +20,7 @@ config:
   valornet-infra:landing-pages-service.imageTag: latest
   valornet-infra:specialty-care-service.imageTag: latest
   valornet-infra:workouts-service.imageTag: latest
-  valornet-infra:chat-service.imageTag: b15059bb
+  valornet-infra:chat-service.imageTag: be620253
   valornet-infra:classes-service.imageTag: latest
   valornet-infra:pdf-generator-service.imageTag: abc
   valornet-infra:pdf-generator-service-worker.imageTag: 0972cc6c
