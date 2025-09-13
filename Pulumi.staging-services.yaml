@@ -23,6 +23,6 @@ config:
   valornet-infra:chat-service.imageTag: 07ab93f8
   valornet-infra:classes-service.imageTag: latest
   valornet-infra:pdf-generator-service.imageTag: latest
-  valornet-infra:call-request-service.imageTag: 0e3ab592
+  valornet-infra:call-request-service.imageTag: 9a76949e
   valornet-infra:notifications-service.imageTag: initial
 encryptionsalt: v1:uw0kFASTyV0=:v1:9egG5d7hsTIQQwX8:2a3xPmNztRuGT3GKMkvS/zy2k9kcjg==
