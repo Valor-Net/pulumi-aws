@@ -264,6 +264,8 @@ initialTenants.forEach(tenantName => {
 
     ensureSecret(`${stack}-${tenantName}-notifications-data`, `${tenantName} Notifications secret - managed by NotificationsService`);
 });
+ensureSecret(`${stack}-agora-tokens`, `${stack} Agora tokens - Used to create RTC tokens`);
+
 const generalSecretData = pulumi.all([rds.endpoint, rds.port, dbPassword, bastion.publicIp, bastion.publicDns, redis.cacheNodes]).apply(([endpoint, port, password, bastionIp, bastionDns, redisNode]) => ({
     host: endpoint,
     port: port,
