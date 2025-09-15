@@ -146,11 +146,16 @@ laravelServices.forEach((svc, idx) => {
         env.AUTH_SERVICE_JWKS_URL = pulumi.interpolate`http://auth-service.${firstPartOfStack}-core.local/auth/v1/.well-known/jwks.json`
     }
 
+    if(svc.path === 'telemedicine'){
+        const firstPartOfStack = stack.split('-')[0];
+        env.USERS_SERVICE_URL = pulumi.interpolate`http://users-service.${firstPartOfStack}-core.local/users/v1`;
+    }
+
     if(svc.path === 'call-request'){
         env.SQS_NOTIFICATIONS_QUEUE = notificationsQueue;
     }
 
-    const serviceDiscovery = svc.path === 'auth' ? createSdService(svc.name, privDnsNsId) : undefined
+    const serviceDiscovery = svc.path === 'auth' || svc.path === 'users' ? createSdService(svc.name, privDnsNsId) : undefined
 
     makeHttpFargate({
         svc: { name: svc.name, imageRepo: svc.imageRepo, imageTag: imageTag, port: svc.port },

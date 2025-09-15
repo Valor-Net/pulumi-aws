@@ -602,7 +602,24 @@ const laravelServices: HttpSvc[] = [
 
         ]
     },
+    {
+        name: servicesInitialConfig.telemedicine.name,
+        envName: servicesInitialConfig.telemedicine.envName,
+        path: "telemedicine",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.telemedicine.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.telemedicine.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
 
+        ]
+    },
 ]
 
 const goServices: HttpSvc[] = [
