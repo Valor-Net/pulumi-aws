@@ -75,7 +75,7 @@ const getTgAndTaskRole = (
         listenerArn: listenerArn,
         svc: { ...svc, port: targetPort },
         vpcId: vpcId,
-        priority: 10 + priorityModifier,
+        priority: 100 + (priorityModifier * 10)
     });
 
     const taskRole = createEcsTaskRole({

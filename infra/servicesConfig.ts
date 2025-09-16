@@ -162,11 +162,11 @@ const servicesInitialConfig: Record<string, ServiceInitialConfig> = {
         repo:"staging-services-workouts-service-repo",
         sidecarRepo: "staging-services-workouts-service-nginx-repo",
     },
-    meditations: {
-        name: "meditations-service",
-        envName: "MeditationsService",
-        repo:"staging-services-meditations-service-repo",
-        sidecarRepo: "staging-services-meditations-service-nginx-repo",
+    videos: {
+        name: "videos-service",
+        envName: "VideosService",
+        repo:"staging-services-videos-service-repo",
+        sidecarRepo: "staging-services-videos-service-nginx-repo",
     },
     sleep: {
         name: "sleep-service",
@@ -213,6 +213,12 @@ const servicesInitialConfig: Record<string, ServiceInitialConfig> = {
         envName: "TelemedicineService",
         repo:"staging-services-telemedicine-service-repo",
         sidecarRepo: "staging-services-telemedicine-service-nginx-repo",
+    },
+    events: {
+        name: "events-service",
+        envName: "EventsService",
+        repo:"staging-services-events-service-repo",
+        sidecarRepo: "staging-services-events-service-nginx-repo",
     }
 }
 
@@ -495,13 +501,13 @@ const laravelServices: HttpSvc[] = [
         ]
     },
     {
-        name: servicesInitialConfig.meditations.name,
-        envName: servicesInitialConfig.meditations.envName,
-        path: "meditations",
+        name: servicesInitialConfig.videos.name,
+        envName: servicesInitialConfig.videos.envName,
+        path: "videos",
         healthPath: "/health",
         port: 9000,
-        imageRepo: servicesInitialConfig.meditations.repo,
-        nginxSidecarImageRepo: servicesInitialConfig.meditations.sidecarRepo,
+        imageRepo: servicesInitialConfig.videos.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.videos.sidecarRepo,
         tech: "laravel",
         policies: [
             aws.iam.ManagedPolicy.AmazonSQSFullAccess,
@@ -620,6 +626,24 @@ const laravelServices: HttpSvc[] = [
 
         ]
     },
+    {
+        name: servicesInitialConfig.events.name,
+        envName: servicesInitialConfig.events.envName,
+        path: "events",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.events.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.events.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
+        ]
+    }
 ]
 
 const goServices: HttpSvc[] = [
