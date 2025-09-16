@@ -17,7 +17,7 @@ config:
   valornet-infra:meditations-service.imageTag: latest
   valornet-infra:sleep-service.imageTag: latest
   valornet-infra:spiritual-service.imageTag: latest
-  valornet-infra:landing-pages-service.imageTag: latest
+  valornet-infra:landing-pages-service.imageTag: 9e080f34
   valornet-infra:specialty-care-service.imageTag: latest
   valornet-infra:workouts-service.imageTag: latest
   valornet-infra:chat-service.imageTag: 07ab93f8
