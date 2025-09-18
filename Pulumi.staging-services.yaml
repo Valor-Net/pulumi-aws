@@ -15,7 +15,7 @@ config:
   valornet-infra:mental-service.imageTag: cd2552ed
   valornet-infra:podcasts-service.imageTag: d5a75d8d
   valornet-infra:videos-service.imageTag: initial
-  valornet-infra:sleep-service.imageTag: latest
+  valornet-infra:sleep-service.imageTag: fd2a17a8
   valornet-infra:spiritual-service.imageTag: latest
   valornet-infra:landing-pages-service.imageTag: 9e080f34
   valornet-infra:specialty-care-service.imageTag: latest
