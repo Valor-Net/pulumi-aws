@@ -11,7 +11,7 @@ config:
   valornet-infra:nutritional-service.imageTag: latest
   valornet-infra:resource-center-service.imageTag: latest
   valornet-infra:relaxing-sounds-service.imageTag: latest
-  valornet-infra:readiness-contents-service.imageTag: latest
+  valornet-infra:readiness-contents-service.imageTag: d0340f90
   valornet-infra:mental-service.imageTag: cd2552ed
   valornet-infra:podcasts-service.imageTag: d5a75d8d
   valornet-infra:videos-service.imageTag: initial
