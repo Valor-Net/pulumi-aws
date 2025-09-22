@@ -17,7 +17,7 @@ config:
   valornet-infra:videos-service.imageTag: initial
   valornet-infra:sleep-service.imageTag: fd2a17a8
   valornet-infra:spiritual-service.imageTag: latest
-  valornet-infra:landing-pages-service.imageTag: b4305ad6
+  valornet-infra:landing-pages-service.imageTag: e01a9ee6
   valornet-infra:specialty-care-service.imageTag: latest
   valornet-infra:workouts-service.imageTag: latest
   valornet-infra:chat-service.imageTag: 05d98830
