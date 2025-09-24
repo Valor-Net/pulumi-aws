@@ -1,4 +1,0 @@
-config:
-  valornet-infra:
-    auth-service:imageTag: "initial"
-    email-service:imageTag: "initial"

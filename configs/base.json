@@ -1,0 +1,100 @@
+{
+    "defaults": {
+        "ecs": {
+            "cpu": 256,
+            "memory": 512,
+            "env": {
+                "NODE_ENV": "production",
+                "LOG_LEVEL": "info"
+            }
+      }
+    },
+    "services": {
+        "auth-service": {
+            "imageTag": "3d6fea80"
+        },
+        "email-service": {
+            "imageTag": "test"
+         },
+        "backoffice-service": {
+            "imageTag": "initial"
+         },
+        "valornet-backoffice-frontend": {
+            "imageTag": "initial"
+         },
+        "file-processor-lambda-service": {
+            "imageTag": "twelve", 
+            "type": "lambda"
+        },
+        "valornet-frontend": {
+            "imageTag": "dd30ddcc"
+         },
+        "users-service": {
+            "imageTag": "dc24d4cd"
+         },
+        "brain-games-service": {
+            "imageTag": "07c26a48"
+         },
+        "books-service": {
+            "imageTag": "b8dc3303"
+         },
+        "nutritional-service":{
+            "imageTag": "latest"
+         },
+        "resource-center-service": {
+            "imageTag": "latest"
+         },
+        "relaxing-sounds-service": {
+            "imageTag": "latest"
+         },
+        "readiness-contents-service":{
+            "imageTag": "d0340f90"
+         },
+        "mental-service": {
+            "imageTag": "4db43856"
+         },
+        "podcasts-service": {
+            "imageTag": "d5a75d8d"
+         },
+        "videos-service": {
+            "imageTag": "initial"
+         },
+        "sleep-service": {
+            "imageTag": "e274375b"
+         },
+        "spiritual-service": {
+            "imageTag": "latest"
+         },
+        "landing-pages-service": {
+            "imageTag": "e01a9ee6"
+         },
+        "specialty-care-service": {
+            "imageTag": "latest"
+         },
+        "workouts-service": {
+            "imageTag": "latest"
+         },
+        "chat-service": {
+            "imageTag": "05d98830"
+         },
+        "classes-service": {
+            "imageTag": "latest"
+         },
+        "pdf-generator-service": {
+            "imageTag": "latest"
+         },
+        "call-request-service": {
+            "imageTag": "2df80c2b"
+         },
+        "notifications-service": {
+            "imageTag": "initial"
+         },
+        "telemedicine-service": {
+            "imageTag": "285ce79a"
+         },
+        "events-service": {
+            "imageTag": "c34e4320"
+         }
+    }
+  }
+  

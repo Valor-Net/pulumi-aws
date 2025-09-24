@@ -337,7 +337,7 @@ frontendServices.forEach((svc, idx) => {
 
     const env: Record<string, pulumi.Input<string>> = {
         NODE_ENV:                      "staging",
-        NEXT_PUBLIC_BASE_URL:          `https://${svc.supportedTenants[0].subdomain}`,
+        NEXT_PUBLIC_BASE_URL:          `https://${svc.supportedTenants[0].subdomain}/`,
         NEXT_PUBLIC_PROJECT_NAME:      "Admin Panel",
         PORT:                          svc.port.toString(),
         API_ENDPOINT:                  "https://stg.valornetvets.com",
