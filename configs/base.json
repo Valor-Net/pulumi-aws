@@ -4,97 +4,149 @@
             "cpu": 256,
             "memory": 512,
             "env": {
-                "NODE_ENV": "production",
+                "NODE_ENV": "staging",
                 "LOG_LEVEL": "info"
             }
-      }
+        },
+        "http": {
+            "port": 9000,
+            "healthPath": "/health",
+            "tech": "laravel",
+            "policies": ["bundle:laravel-min"]
+        },
+        "frontend": {
+            "port": 3000,
+            "healthPath": "/api/health",
+            "tech": "nextjs",
+            "policies": ["bundle:nextjs-min"]
+        },
+        "worker": {
+            "policies": ["bundle:laravel-min"]
+        },
+        "lambda": {
+            "policies": ["bundle:laravel-min"],
+            "triggeredBy": ["s3"]
+        }
     },
     "services": {
-        "auth-service": {
-            "imageTag": "3d6fea80"
+        "http": {
+            "auth-service": {
+                "imageTag": "3d6fea80",
+                "path": "auth"
+            },
+            "users-service": {
+                "imageTag": "dc24d4cd",
+                "path": "users"
+            },
+            "brain-games-service": {
+                "imageTag": "07c26a48",
+                "path": "brain-games"
+            },
+            "books-service": {
+                "imageTag": "b8dc3303",
+                "path": "books"
+            },
+            "nutritional-service":{
+                "imageTag": "latest",
+                "path": "nutritional"
+            },
+            "resource-center-service": {
+                "imageTag": "latest",
+                "path": "resource-center"
+            },
+            "relaxing-sounds-service": {
+                "imageTag": "latest",
+                "path": "relaxing-sounds"
+            },
+            "spiritual-service": {
+                "imageTag": "latest",
+                "path": "spiritual"
+            },
+            "mental-service": {
+                "imageTag": "4db43856",
+                "path": "mental"
+            },
+            "specialty-care-service": {
+                "imageTag": "latest",
+                "path": "specialty-care"
+            },
+            "landing-pages-service": {
+                "imageTag": "e01a9ee6",
+                "path": "landing-pages"
+            },
+            "podcasts-service": {
+                "imageTag": "d5a75d8d",
+                "path": "podcasts"
+            },
+            "workouts-service": {
+                "imageTag": "latest",
+                "path": "workouts"
+            },
+            "videos-service": {
+                "imageTag": "initial",
+                "path": "videos"
+            },
+            "sleep-service": {
+                "imageTag": "e274375b",
+                "path": "sleep"
+            },
+            "readiness-contents-service":{
+                "imageTag": "d0340f90",
+                "path": "readiness-contents"
+            },
+            "chat-service": {
+                "imageTag": "05d98830",
+                "path": "chat"
+            },
+            "classes-service": {
+                "imageTag": "latest",
+                "path": "classes"
+            },
+            "call-request-service": {
+                "imageTag": "2df80c2b",
+                "path": "call-request"
+            },
+            "telemedicine-service": {
+                "imageTag": "285ce79a",
+                "path": "telemedicine"
+            },
+            "events-service": {
+                "imageTag": "c34e4320",
+                "path": "events"
+            },
+            "backoffice-service": {
+                "imageTag": "initial",
+                "path": "backoffice",
+                "tech": "go"
+            }
         },
-        "email-service": {
-            "imageTag": "test"
-         },
-        "backoffice-service": {
-            "imageTag": "initial"
-         },
-        "valornet-backoffice-frontend": {
-            "imageTag": "initial"
-         },
-        "file-processor-lambda-service": {
-            "imageTag": "twelve", 
-            "type": "lambda"
+        "worker": {
+            "notifications-service": {
+                "imageTag": "initial",
+                "command": ["php", "artisan", "queue:work", "raw_sqs", "--sleep=3", "--daemon", "--max-jobs=1000", "--max-time=3600"]
+            },
+            "pdf-generator-service": {
+                "imageTag": "latest",
+                "command": ["php", "artisan", "queue:work", "pdf_raw_sqs", "--sleep=3", "--daemon", "--max-jobs=2000", "--max-time=7200"]
+            },
+            "email-service": {
+                "imageTag": "test",
+                "command": ["php", "artisan", "queue:work", "raw_sqs", "--sleep=3", "--daemon", "--max-jobs=1000", "--max-time=3600"]
+            }
         },
-        "valornet-frontend": {
-            "imageTag": "dd30ddcc"
-         },
-        "users-service": {
-            "imageTag": "dc24d4cd"
-         },
-        "brain-games-service": {
-            "imageTag": "07c26a48"
-         },
-        "books-service": {
-            "imageTag": "b8dc3303"
-         },
-        "nutritional-service":{
-            "imageTag": "latest"
-         },
-        "resource-center-service": {
-            "imageTag": "latest"
-         },
-        "relaxing-sounds-service": {
-            "imageTag": "latest"
-         },
-        "readiness-contents-service":{
-            "imageTag": "d0340f90"
-         },
-        "mental-service": {
-            "imageTag": "4db43856"
-         },
-        "podcasts-service": {
-            "imageTag": "d5a75d8d"
-         },
-        "videos-service": {
-            "imageTag": "initial"
-         },
-        "sleep-service": {
-            "imageTag": "e274375b"
-         },
-        "spiritual-service": {
-            "imageTag": "latest"
-         },
-        "landing-pages-service": {
-            "imageTag": "e01a9ee6"
-         },
-        "specialty-care-service": {
-            "imageTag": "latest"
-         },
-        "workouts-service": {
-            "imageTag": "latest"
-         },
-        "chat-service": {
-            "imageTag": "05d98830"
-         },
-        "classes-service": {
-            "imageTag": "latest"
-         },
-        "pdf-generator-service": {
-            "imageTag": "latest"
-         },
-        "call-request-service": {
-            "imageTag": "2df80c2b"
-         },
-        "notifications-service": {
-            "imageTag": "initial"
-         },
-        "telemedicine-service": {
-            "imageTag": "285ce79a"
-         },
-        "events-service": {
-            "imageTag": "c34e4320"
-         }
+        "lambda": {
+            "file-processor-lambda-service": {
+                "imageTag": "twelve"
+            }
+        },
+        "frontend": {   
+            "valornet-backoffice-frontend": {
+                "imageTag": "initial"
+            },
+            "valornet-frontend": {
+                "imageTag": "dd30ddcc"
+            }
+        }
     }
   }
   

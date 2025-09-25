@@ -1,0 +1,102 @@
+{
+    "customer": "quest",
+    "environment": "staging",
+    "enable": [
+        "auth-service",
+        "users-service",
+        "valornet-frontend",
+        "backoffice-service",
+        "email-service",
+        "file-processor-lambda-service"
+    ],
+    "disable": [
+        "email-service",
+        "file-processor-lambda-service"
+    ],
+    "overrides": {
+        "global": {
+            "ecs": {
+                "env": {
+                    "NODE_ENV": "staging",
+                    "LOG_LEVEL": "debug",
+                    "TENANT_ROUTE_STRATEGY": "db-per-tenant"
+                }
+            }
+        },
+        "http": {
+            "auth-service": {
+                "ecs": { "cpu": 512, "memory": 1024, "env": { "AUTH_RATE_LIMIT": "200/m" } },
+                "imageTag": "3d6fea81",
+                "path": "auth",
+                "port": 9000,
+                "healthPath": "/health",
+                "tech": "laravel",
+                "nginxSidecar": true,
+                "policies": ["bundle:laravel-full"]
+            },
+            "users-service": {
+                "ecs": { "env": { "UPLOAD_MAX_MB": "25" } },
+                "policies": ["bundle:laravel-s3-sqs"],
+                "nginxSidecar": true
+            },
+            "backoffice-service": {
+                "tech": "go",
+                "port": 8080,
+                "healthPath": "/_health",
+                "nginxSidecar": false,
+                "policies": ["bundle:go-min"]
+            }
+        },
+        "worker": {
+            "email-service": {
+                "ecs": { "cpu": 256, "memory": 512 },
+                "command": ["php", "artisan", "sqs:consume-email"],
+                "queues": ["emails"],
+                "policies": ["bundle:laravel-worker-email"]
+            },
+            "pdf-generator-service": {
+                "ecs": { "cpu": 512, "memory": 1024 },
+                "command": ["php", "artisan", "queue:work", "pdf_raw_sqs", "--sleep=3", "--daemon", "--max-jobs=2000", "--max-time=7200"],
+                "policies": ["bundle:laravel-worker-heavy"]
+            }
+        },
+        "lambda": {
+            "file-processor-lambda-service": {
+                "triggeredBy": ["s3", "sqs"],
+                "policies": ["bundle:lambda-s3-full"],
+                "env": { "IMAGE_MAX_RES": "1920x1080" }
+            }
+        },
+        "frontend": {
+            "valornet-frontend": {
+                "port": 3000,
+                "healthPath": "/api/health",
+                "tech": "nextjs",
+                "policies": ["bundle:nextjs-min"],
+                "env": {
+                    "NEXT_PUBLIC_API_URL": "https://api.quest-staging.valornet",
+                    "NEXT_PUBLIC_SENTRY_DSN": "https://example@o0.ingest.sentry.io/0"
+                },
+                "tenants": [
+                    {
+                        "tenant": "demo",
+                        "subdomain": "stg-demo.quest.com",
+                        "customSettings": {
+                        "theme": "quest",
+                        "primaryColor": "#0055AA"
+                        }
+                    },
+                    {
+                        "tenant": "ops",
+                        "subdomain": "stg-ops.quest.com",
+                        "customSettings": {
+                        "theme": "quest-ops",
+                        "primaryColor": "#222222"
+                        }
+                    }
+                ]
+            }
+        }
+    }
+  }
+  
