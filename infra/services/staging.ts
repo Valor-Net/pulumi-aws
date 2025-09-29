@@ -342,7 +342,7 @@ frontendServices.forEach((svc, idx) => {
         PORT:                          svc.port.toString(),
         API_ENDPOINT:                  "https://stg.valornetvets.com",
         SUPPORTED_TENANTS:             JSON.stringify(svc.supportedTenants.map((t) => t.tenant)),
-        TENANT:                        "demo",
+        TENANT:                        "quest",
         NEXT_PUBLIC_FILES_URL:         "https://valornet-assets.s3.us-east-1.amazonaws.com/uploads"
     };
 
