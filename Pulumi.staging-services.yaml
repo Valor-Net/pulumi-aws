@@ -4,23 +4,23 @@ config:
   valornet-infra:backoffice-service.imageTag: initial
   valornet-infra:valornet-backoffice-frontend.imageTag: initial
   valornet-infra:file-processor-lambda-service.imageTag: twelve
-  valornet-infra:valornet-frontend.imageTag: "4856409b"
+  valornet-infra:valornet-frontend.imageTag: "d248f2ab"
   valornet-infra:users-service.imageTag: b101a5c4
   valornet-infra:brain-games-service.imageTag: 07c26a48
-  valornet-infra:books-service.imageTag: b8dc3303
+  valornet-infra:books-service.imageTag: bda521ec
   valornet-infra:nutritional-service.imageTag: latest
   valornet-infra:resource-center-service.imageTag: latest
-  valornet-infra:relaxing-sounds-service.imageTag: latest
+  valornet-infra:relaxing-sounds-service.imageTag: 1144eaa5
   valornet-infra:readiness-contents-service.imageTag: d0340f90
   valornet-infra:mental-service.imageTag: 4db43856
   valornet-infra:podcasts-service.imageTag: 82a2c900
   valornet-infra:videos-service.imageTag: 3ea4a14e
   valornet-infra:sleep-service.imageTag: e274375b
   valornet-infra:spiritual-service.imageTag: latest
-  valornet-infra:landing-pages-service.imageTag: 3dde625d
+  valornet-infra:landing-pages-service.imageTag: 401e6512
   valornet-infra:specialty-care-service.imageTag: latest
   valornet-infra:workouts-service.imageTag: latest
-  valornet-infra:chat-service.imageTag: 05d98830
+  valornet-infra:chat-service.imageTag: 84aa40bd
   valornet-infra:classes-service.imageTag: d416c9d4
   valornet-infra:pdf-generator-service.imageTag: latest
   valornet-infra:call-request-service.imageTag: 2df80c2b
