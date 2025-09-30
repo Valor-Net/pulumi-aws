@@ -10,7 +10,7 @@ config:
   valornet-infra:books-service.imageTag: bda521ec
   valornet-infra:nutritional-service.imageTag: latest
   valornet-infra:resource-center-service.imageTag: latest
-  valornet-infra:relaxing-sounds-service.imageTag: latest
+  valornet-infra:relaxing-sounds-service.imageTag: be4d788b
   valornet-infra:readiness-contents-service.imageTag: d0340f90
   valornet-infra:mental-service.imageTag: 4db43856
   valornet-infra:podcasts-service.imageTag: 82a2c900
