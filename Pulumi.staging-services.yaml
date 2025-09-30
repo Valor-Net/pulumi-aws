@@ -7,7 +7,7 @@ config:
   valornet-infra:valornet-frontend.imageTag: "5663b9af"
   valornet-infra:users-service.imageTag: b101a5c4
   valornet-infra:brain-games-service.imageTag: 07c26a48
-  valornet-infra:books-service.imageTag: b8dc3303
+  valornet-infra:books-service.imageTag: bda521ec
   valornet-infra:nutritional-service.imageTag: latest
   valornet-infra:resource-center-service.imageTag: latest
   valornet-infra:relaxing-sounds-service.imageTag: latest
