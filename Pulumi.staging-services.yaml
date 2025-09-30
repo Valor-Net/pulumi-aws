@@ -1,11 +1,11 @@
 config:
-  valornet-infra:auth-service.imageTag: "3d6fea80"
+  valornet-infra:auth-service.imageTag: "e38de59d"
   valornet-infra:email-service.imageTag: test
   valornet-infra:backoffice-service.imageTag: initial
   valornet-infra:valornet-backoffice-frontend.imageTag: initial
   valornet-infra:file-processor-lambda-service.imageTag: twelve
-  valornet-infra:valornet-frontend.imageTag: "dd30ddcc"
-  valornet-infra:users-service.imageTag: dc24d4cd
+  valornet-infra:valornet-frontend.imageTag: "4856409b"
+  valornet-infra:users-service.imageTag: b101a5c4
   valornet-infra:brain-games-service.imageTag: 07c26a48
   valornet-infra:books-service.imageTag: b8dc3303
   valornet-infra:nutritional-service.imageTag: latest
@@ -13,18 +13,18 @@ config:
   valornet-infra:relaxing-sounds-service.imageTag: latest
   valornet-infra:readiness-contents-service.imageTag: d0340f90
   valornet-infra:mental-service.imageTag: 4db43856
-  valornet-infra:podcasts-service.imageTag: d5a75d8d
-  valornet-infra:videos-service.imageTag: initial
+  valornet-infra:podcasts-service.imageTag: 82a2c900
+  valornet-infra:videos-service.imageTag: 3ea4a14e
   valornet-infra:sleep-service.imageTag: e274375b
   valornet-infra:spiritual-service.imageTag: latest
-  valornet-infra:landing-pages-service.imageTag: e01a9ee6
+  valornet-infra:landing-pages-service.imageTag: 3dde625d
   valornet-infra:specialty-care-service.imageTag: latest
   valornet-infra:workouts-service.imageTag: latest
   valornet-infra:chat-service.imageTag: 05d98830
-  valornet-infra:classes-service.imageTag: latest
+  valornet-infra:classes-service.imageTag: d416c9d4
   valornet-infra:pdf-generator-service.imageTag: latest
   valornet-infra:call-request-service.imageTag: 2df80c2b
   valornet-infra:notifications-service.imageTag: initial
-  valornet-infra:telemedicine-service.imageTag: 285ce79a
-  valornet-infra:events-service.imageTag: c34e4320
+  valornet-infra:telemedicine-service.imageTag: a6a444d0
+  valornet-infra:events-service.imageTag: 5982ce27
 encryptionsalt: v1:uw0kFASTyV0=:v1:9egG5d7hsTIQQwX8:2a3xPmNztRuGT3GKMkvS/zy2k9kcjg==
