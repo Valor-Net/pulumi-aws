@@ -8,7 +8,7 @@ config:
   valornet-infra:users-service.imageTag: 1f7988d3
   valornet-infra:brain-games-service.imageTag: 07c26a48
   valornet-infra:books-service.imageTag: bda521ec
-  valornet-infra:nutritional-service.imageTag: f60ddaeb
+  valornet-infra:nutritional-service.imageTag: 53ee94b9
   valornet-infra:resource-center-service.imageTag: latest
   valornet-infra:relaxing-sounds-service.imageTag: 1144eaa5
   valornet-infra:readiness-contents-service.imageTag: d0340f90
