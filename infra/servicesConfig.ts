@@ -231,6 +231,12 @@ const servicesInitialConfig: Record<string, ServiceInitialConfig> = {
         envName: "RunWalkingService",
         repo:"staging-services-run-walking-service-repo",
         sidecarRepo: "staging-services-run-walking-service-nginx-repo",
+    },
+    proTrainerWorkouts: {
+        name: "pro-trainer-workouts-service",
+        envName: "ProTrainerWorkoutsService",
+        repo:"staging-services-pro-trainer-workouts-service-repo",
+        sidecarRepo: "staging-services-pro-trainer-workouts-service-nginx-repo",
     }
 }
 
@@ -682,6 +688,24 @@ const laravelServices: HttpSvc[] = [
         port: 9000,
         imageRepo: servicesInitialConfig.runWalking.repo,
         nginxSidecarImageRepo: servicesInitialConfig.runWalking.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
+        ]
+    },
+    {
+        name: servicesInitialConfig.proTrainerWorkouts.name,
+        envName: servicesInitialConfig.proTrainerWorkouts.envName,
+        path: "pro-trainer-workouts",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.proTrainerWorkouts.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.proTrainerWorkouts.sidecarRepo,
         tech: "laravel",
         policies: [
             aws.iam.ManagedPolicy.AmazonSQSFullAccess,
