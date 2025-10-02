@@ -24,11 +24,10 @@ config:
   valornet-infra:classes-service.imageTag: d416c9d4
   valornet-infra:pdf-generator-service.imageTag: latest
   valornet-infra:call-request-service.imageTag: 67a8f3b8
-  valornet-infra:notifications-service.imageTag: initial
+  valornet-infra:notifications-service.imageTag: b0a7ca8b
   valornet-infra:telemedicine-service.imageTag: a6a444d0
   valornet-infra:events-service.imageTag: 5982ce27
   valornet-infra:group-challenges-service.imageTag: initial
   valornet-infra:run-walking-service.imageTag: initial
-  valornet-infra:notifications-service-worker.imageTag: b0a7ca8b
   valornet-infra:pro-trainer-workouts-service.imageTag: initial
 encryptionsalt: v1:uw0kFASTyV0=:v1:9egG5d7hsTIQQwX8:2a3xPmNztRuGT3GKMkvS/zy2k9kcjg==

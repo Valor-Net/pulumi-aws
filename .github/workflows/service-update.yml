@@ -82,6 +82,7 @@ jobs:
 
         SERVICE_NAME_BASE=${{ github.event.inputs.service_name }}
         SERVICE_NAME_BASE=${SERVICE_NAME_BASE%-*}
+        SERVICE_NAME_BASE=${SERVICE_NAME_BASE%-worker}
         
         CONFIG_KEY="valornet-infra:${SERVICE_NAME_BASE}.imageTag"
         echo "📝 Atualizando config: ${CONFIG_KEY} = ${{ github.event.inputs.image_tag }}"
