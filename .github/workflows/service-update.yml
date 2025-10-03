@@ -95,7 +95,7 @@ jobs:
         git config --global user.name "CI/CD Bot"
         
         # Verificar se há mudanças
-        if git diff --quiet; then
+        if git diff --quiet Pulumi.staging-services.yaml; then
           echo "ℹ️ Nenhuma mudança para commit"
         else
           git add Pulumi.${{ github.event.inputs.stack }}.yaml
