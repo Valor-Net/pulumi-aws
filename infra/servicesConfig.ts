@@ -237,6 +237,12 @@ const servicesInitialConfig: Record<string, ServiceInitialConfig> = {
         envName: "ProTrainerWorkoutsService",
         repo:"staging-services-pro-trainer-workouts-service-repo",
         sidecarRepo: "staging-services-pro-trainer-workouts-service-nginx-repo",
+    },
+    userRecords: {
+        name: "user-records-service",
+        envName: "UserRecordsService",
+        repo:"staging-services-user-records-service-repo",
+        sidecarRepo: "staging-services-user-records-service-nginx-repo",
     }
 }
 
@@ -706,6 +712,24 @@ const laravelServices: HttpSvc[] = [
         port: 9000,
         imageRepo: servicesInitialConfig.proTrainerWorkouts.repo,
         nginxSidecarImageRepo: servicesInitialConfig.proTrainerWorkouts.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
+        ]
+    },
+    {
+        name: servicesInitialConfig.userRecords.name,
+        envName: servicesInitialConfig.userRecords.envName,
+        path: "user-records",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.userRecords.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.userRecords.sidecarRepo,
         tech: "laravel",
         policies: [
             aws.iam.ManagedPolicy.AmazonSQSFullAccess,
