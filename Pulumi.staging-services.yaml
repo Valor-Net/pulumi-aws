@@ -18,7 +18,7 @@ config:
   valornet-infra:sleep-service.imageTag: e274375b
   valornet-infra:spiritual-service.imageTag: latest
   valornet-infra:landing-pages-service.imageTag: 401e6512
-  valornet-infra:specialty-care-service.imageTag: latest
+  valornet-infra:specialty-care-service.imageTag: a53d5620
   valornet-infra:workouts-service.imageTag: latest
   valornet-infra:chat-service.imageTag: 84aa40bd
   valornet-infra:classes-service.imageTag: d416c9d4
