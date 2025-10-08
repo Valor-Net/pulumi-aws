@@ -25,7 +25,7 @@ config:
   valornet-infra:pdf-generator-service.imageTag: latest
   valornet-infra:call-request-service.imageTag: "60805538"
   valornet-infra:notifications-service.imageTag: dfcccdbe
-  valornet-infra:telemedicine-service.imageTag: a6a444d0
+  valornet-infra:telemedicine-service.imageTag: ce63deac
   valornet-infra:events-service.imageTag: 5982ce27
   valornet-infra:group-challenges-service.imageTag: initial
   valornet-infra:run-walking-service.imageTag: 0c7a2adc
