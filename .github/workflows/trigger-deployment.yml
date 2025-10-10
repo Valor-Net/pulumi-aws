@@ -63,7 +63,7 @@ jobs:
         version: 9
      
     - name: Install dependencies
-      run: pnpm install
+      run: pnpm install --frozen-lockfile --ignore-scripts
      
     - name: Setup Pulumi
       uses: pulumi/actions@v4
