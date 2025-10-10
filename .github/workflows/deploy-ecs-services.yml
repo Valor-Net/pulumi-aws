@@ -1,0 +1,123 @@
+name: Deploy ECS Services
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'  # A cada 5 minutos, verifica a fila
+
+# Um deployment por vez
+concurrency:
+  group: ecs-deployment-processor
+  cancel-in-progress: false
+
+jobs:
+  process-queue:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    
+    steps:
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.INFRA_REPO_TOKEN }}
+        fetch-depth: 0
+    
+    - name: Setup Node.js and PNPM
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@v3
+      with:
+        version: 9
+     
+    - name: Install dependencies
+      run: pnpm install
+     
+    - name: Setup Pulumi
+      uses: pulumi/actions@v4
+      with:
+        pulumi-version: ^3.0.0
+    
+    - name: Process deployment queue
+      env:
+        PULUMI_CONFIG_PASSPHRASE: ""
+        OAUTH_PRIVATE_KEY: ${{ secrets.STG_OAUTH_PRIVATE_KEY }}
+        OAUTH_PUBLIC_KEY: ${{ secrets.STG_OAUTH_PUBLIC_KEY }}
+      run: |
+        git config user.email "ci@valornet.com"
+        git config user.name "CI/CD Bot"
+        
+        QUEUE_DIR=".github/deployment-queue"
+        
+        if [ ! -d "$QUEUE_DIR" ] || [ -z "$(ls -A $QUEUE_DIR 2>/dev/null)" ]; then
+          echo "ℹ️ Fila vazia"
+          exit 0
+        fi
+        
+        pulumi login s3://valornet-pulumi-backend
+        
+        # Processar cada arquivo na fila (ordem alfabética = ordem cronológica)
+        for REQUEST_FILE in $(ls $QUEUE_DIR/*.json | sort); do
+          echo "=========================================="
+          echo "📦 Processando: $(basename $REQUEST_FILE)"
+          echo "=========================================="
+          
+          # Ler dados do request
+          IMAGE_TAG=$(jq -r '.image_tag' "$REQUEST_FILE")
+          SERVICE_NAME=$(jq -r '.service_name' "$REQUEST_FILE")
+          STACK=$(jq -r '.stack' "$REQUEST_FILE")
+          COMMIT_SHA=$(jq -r '.commit_sha' "$REQUEST_FILE")
+          
+          echo "🎯 Serviço: $SERVICE_NAME"
+          echo "🏷️ Tag: $IMAGE_TAG"
+          echo "📦 Stack: $STACK"
+          
+          # Atualizar Pulumi config
+          pulumi stack select "$STACK"
+          
+          SERVICE_NAME_BASE=${SERVICE_NAME%-*}
+          SERVICE_NAME_BASE=${SERVICE_NAME_BASE%-worker}
+          
+          CONFIG_KEY="valornet-infra:${SERVICE_NAME_BASE}.imageTag"
+          pulumi config set ${CONFIG_KEY} $IMAGE_TAG
+          
+          # Commit das mudanças do Pulumi
+          git add "Pulumi.${STACK}.yaml"
+          git commit -m "🤖 ci: deploy ${SERVICE_NAME} with tag ${IMAGE_TAG}
+
+          📦 Stack: ${STACK}
+          🏷️ Image Tag: ${IMAGE_TAG}
+          📝 Commit SHA: ${COMMIT_SHA}"
+          
+          git push origin main
+          
+          # Deploy com Pulumi
+          echo "🚀 Executando Pulumi Up..."
+          pulumi install
+          pulumi up --yes --stack "$STACK" \
+            --target "urn:pulumi:${STACK}::infra::awsx:ecs:FargateService::${SERVICE_NAME_BASE}" \
+            --target-dependents
+          
+          # Remover da fila
+          git pull origin main
+          rm "$REQUEST_FILE"
+          git add "$REQUEST_FILE"
+          git commit -m "✅ Deployment concluído: ${SERVICE_NAME}"
+          git push origin main
+          
+          echo "✅ Deployment concluído!"
+          echo ""
+        done
+        
+        echo "🎉 Todos os deployments processados!"
