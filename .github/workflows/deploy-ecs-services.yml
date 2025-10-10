@@ -42,7 +42,7 @@ jobs:
         version: 9
      
     - name: Install dependencies
-      run: pnpm install
+      run: pnpm install --frozen-lockfile --ignore-scripts
      
     - name: Setup Pulumi
       uses: pulumi/actions@v4
@@ -57,6 +57,8 @@ jobs:
       run: |
         git config user.email "ci@valornet.com"
         git config user.name "CI/CD Bot"
+
+        git checkout -- pnpm-lock.yaml 2>/dev/null || true
         
         QUEUE_DIR=".github/deployment-queue"
         
