@@ -1,0 +1,10 @@
+{
+  "image_tag": "85bb82aa",
+  "service_name": "books-service-3a7551b",
+  "stack": "staging-services",
+  "commit_sha": "85bb82aa",
+  "ecr_repository": "staging-services-books-service-repo",
+  "ecs_cluster": "staging-services-cluster",
+  "requested_at": "2025-10-10 19:14:12 UTC",
+  "run_id": "18416150808"
+}
