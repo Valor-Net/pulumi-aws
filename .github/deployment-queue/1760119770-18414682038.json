@@ -1,0 +1,10 @@
+{
+  "image_tag": "ac0d0b3a",
+  "service_name": "users-service-f2cd918",
+  "stack": "staging-services",
+  "commit_sha": "ac0d0b3a",
+  "ecr_repository": "staging-services-users-service-repo",
+  "ecs_cluster": "staging-services-cluster",
+  "requested_at": "2025-10-10 18:09:30 UTC",
+  "run_id": "18414682038"
+}
