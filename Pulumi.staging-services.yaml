@@ -1,5 +1,5 @@
 config:
-  valornet-infra:auth-service.imageTag: "e38de59d"
+  valornet-infra:auth-service.imageTag: "c634c00f"
   valornet-infra:email-service.imageTag: test
   valornet-infra:backoffice-service.imageTag: initial
   valornet-infra:valornet-backoffice-frontend.imageTag: initial
