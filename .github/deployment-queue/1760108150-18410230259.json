@@ -1,0 +1,10 @@
+{
+  "image_tag": "e95e54bf",
+  "service_name": "telemedicine-service-c4a5fb3",
+  "stack": "staging-services",
+  "commit_sha": "e95e54bf",
+  "ecr_repository": "staging-services-telemedicine-service-repo",
+  "ecs_cluster": "staging-services-cluster",
+  "requested_at": "2025-10-10 14:55:50 UTC",
+  "run_id": "18410230259"
+}
