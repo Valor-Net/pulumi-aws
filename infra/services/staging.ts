@@ -110,25 +110,26 @@ laravelServices.forEach((svc, idx) => {
     const { tg, taskRole } = getTgAndTaskRole(svc, targetPort, idx);
     
     const env: Record<string, pulumi.Input<string>> = {
-        APP_NAME:            svc.envName,
-        APP_ENV:             "staging",
-        APP_DEBUG:           "false",
-        APP_URL:             "https://stg.valornetvets.com",
-        QUEUE_CONNECTION:    "sqs",
-        REDIS_CLIENT:        "phpredis",
-        REDIS_HOST:          redisEndpoint,
-        REDIS_PORT:          "6379",
-        AWS_ACCOUNT_ID:      pulumi.interpolate`${accountId}`,
-        AWS_DEFAULT_REGION:  aws.config.requireRegion(),
-        SQS_PREFIX:          pulumi.interpolate`https://sqs.${aws.config.region}.amazonaws.com/${accountId}`,
-        SQS_QUEUE:           emailQueue,
-        SQS_EMAIL_QUEUE:     emailQueue,
-        SQS_PDF_QUEUE:       pdfQueue,
-        AWS_BUCKET:          "valornet-assets",
-        TENANT_SECRET_NAME:  "staging-core-secret",
-        DB_CONNECTION:       "mysql",
-        FILESYSTEM_DISK:     "s3",
-        CACHE_STORE:         "file",
+        APP_NAME:                   svc.envName,
+        APP_ENV:                    "staging",
+        APP_DEBUG:                  "false",
+        APP_URL:                    "https://stg.valornetvets.com",
+        QUEUE_CONNECTION:           "sqs",
+        REDIS_CLIENT:               "phpredis",
+        REDIS_HOST:                 redisEndpoint,
+        REDIS_PORT:                 "6379",
+        AWS_ACCOUNT_ID:             pulumi.interpolate`${accountId}`,
+        AWS_DEFAULT_REGION:         aws.config.requireRegion(),
+        SQS_PREFIX:                 pulumi.interpolate`https://sqs.${aws.config.region}.amazonaws.com/${accountId}`,
+        SQS_QUEUE:                  emailQueue,
+        SQS_EMAIL_QUEUE:            emailQueue,
+        SQS_NOTIFICATIONS_QUEUE:    notificationsQueue,
+        SQS_PDF_QUEUE:              pdfQueue,
+        AWS_BUCKET:                 "valornet-assets",
+        TENANT_SECRET_NAME:         "staging-core-secret",
+        DB_CONNECTION:              "mysql",
+        FILESYSTEM_DISK:            "s3",
+        CACHE_STORE:                "file",
     };
 
     const secrets: Record<string, aws.secretsmanager.Secret> = svc.tech === 'laravel' ? {
@@ -149,10 +150,6 @@ laravelServices.forEach((svc, idx) => {
     if(svc.path === 'telemedicine'){
         const firstPartOfStack = stack.split('-')[0];
         env.USERS_SERVICE_URL = pulumi.interpolate`http://users-service.${firstPartOfStack}-core.local/users/v1`;
-    }
-
-    if(svc.path === 'call-request'){
-        env.SQS_NOTIFICATIONS_QUEUE = notificationsQueue;
     }
 
     const serviceDiscovery = svc.path === 'auth' || svc.path === 'users' ? createSdService(svc.name, privDnsNsId) : undefined
