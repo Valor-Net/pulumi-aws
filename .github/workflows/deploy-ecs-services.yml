@@ -57,8 +57,6 @@ jobs:
       run: |
         git config user.email "ci@valornet.com"
         git config user.name "CI/CD Bot"
-
-        git checkout -- pnpm-lock.yaml 2>/dev/null || true
         
         QUEUE_DIR=".github/deployment-queue"
         
@@ -104,17 +102,14 @@ jobs:
             🏷️ Image Tag: ${IMAGE_TAG}
             📝 Commit SHA: ${COMMIT_SHA}"
             
-            # Tenta push com retry
-            MAX_RETRIES=3
-            for i in $(seq 1 $MAX_RETRIES); do
-              if git push origin main; then
-                echo "✅ Configuração Pulumi commitada"
-                break
-              else
-                echo "⚠️ Push falhou, tentativa $i/$MAX_RETRIES"
-                git pull origin main --rebase
-              fi
-            done
+            git push origin main || {
+              echo "⚠️ Push falhou, fazendo pull e tentando novamente"
+              git checkout -- pnpm-lock.yaml 2>/dev/null || true
+              git pull origin main --rebase
+              git push origin main
+            }
+            
+            echo "✅ Configuração Pulumi commitada"
           else
             echo "ℹ️ Configuração Pulumi já está atualizada"
           fi
@@ -126,36 +121,35 @@ jobs:
             --target "urn:pulumi:${STACK}::infra::awsx:ecs:FargateService::${SERVICE_NAME_BASE}" \
             --target-dependents
           
-        echo "🧹 Removendo da fila..."
-        git pull origin main --rebase
-        
-        if [ -f "$REQUEST_FILE" ]; then
-          rm "$REQUEST_FILE"
-          git add "$REQUEST_FILE"
+          # Remover da fila
+          echo "🧹 Removendo da fila..."
           
-          if ! git diff --staged --quiet; then
-            git commit -m "✅ Deployment concluído: ${SERVICE_NAME}"
+          # Descartar mudanças do Pulumi antes de fazer pull
+          git checkout -- pnpm-lock.yaml 2>/dev/null || true
+          git pull origin main --rebase
+          
+          if [ -f "$REQUEST_FILE" ]; then
+            rm "$REQUEST_FILE"
+            git add "$REQUEST_FILE"
             
-            # Tenta push com retry
-            MAX_RETRIES=3
-            for i in $(seq 1 $MAX_RETRIES); do
-              if git push origin main; then
-                echo "✅ Push realizado com sucesso"
-                break
-              else
-                echo "⚠️ Push falhou, tentativa $i/$MAX_RETRIES"
+            if ! git diff --staged --quiet; then
+              git commit -m "✅ Deployment concluído: ${SERVICE_NAME}"
+              git push origin main || {
+                echo "⚠️ Push falhou, fazendo pull e tentando novamente"
+                git checkout -- pnpm-lock.yaml 2>/dev/null || true
                 git pull origin main --rebase
-              fi
-            done
+                git push origin main
+              }
+              echo "✅ Push realizado com sucesso"
+            else
+              echo "ℹ️ Nenhuma mudança para commitar (arquivo já foi removido)"
+            fi
           else
-            echo "ℹ️ Nenhuma mudança para commitar (arquivo já foi removido)"
+            echo "ℹ️ Arquivo já foi processado por outra execução"
           fi
-        else
-          echo "ℹ️ Arquivo já foi processado por outra execução"
-        fi
-        
-        echo "✅ Deployment concluído!"
-        echo ""
+          
+          echo "✅ Deployment concluído!"
+          echo ""
         done
         
         echo "🎉 Todos os deployments processados!"
