@@ -1,0 +1,10 @@
+{
+  "image_tag": "c85979ca",
+  "service_name": "specialty-care-service-5cd9a55",
+  "stack": "staging-services",
+  "commit_sha": "c85979ca",
+  "ecr_repository": "staging-services-specialty-care-service-repo",
+  "ecs_cluster": "staging-services-cluster",
+  "requested_at": "2025-10-13 19:59:55 UTC",
+  "run_id": "18476818444"
+}
