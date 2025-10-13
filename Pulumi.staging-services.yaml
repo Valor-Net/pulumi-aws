@@ -14,7 +14,7 @@ config:
   valornet-infra:readiness-contents-service.imageTag: d7e41284
   valornet-infra:mental-service.imageTag: 4db43856
   valornet-infra:podcasts-service.imageTag: 807b1964
-  valornet-infra:videos-service.imageTag: "800556e6"
+  valornet-infra:videos-service.imageTag: "98bbb74a"
   valornet-infra:sleep-service.imageTag: e274375b
   valornet-infra:spiritual-service.imageTag: latest
   valornet-infra:landing-pages-service.imageTag: 401e6512
