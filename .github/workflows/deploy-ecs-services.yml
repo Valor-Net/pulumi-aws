@@ -96,13 +96,28 @@ jobs:
           
           # Commit das mudanças do Pulumi
           git add "Pulumi.${STACK}.yaml"
-          git commit -m "🤖 ci: deploy ${SERVICE_NAME} with tag ${IMAGE_TAG}
-
-          📦 Stack: ${STACK}
-          🏷️ Image Tag: ${IMAGE_TAG}
-          📝 Commit SHA: ${COMMIT_SHA}"
           
-          git push origin main
+          if ! git diff --staged --quiet; then
+            git commit -m "🤖 ci: deploy ${SERVICE_NAME} with tag ${IMAGE_TAG}
+            
+            📦 Stack: ${STACK}
+            🏷️ Image Tag: ${IMAGE_TAG}
+            📝 Commit SHA: ${COMMIT_SHA}"
+            
+            # Tenta push com retry
+            MAX_RETRIES=3
+            for i in $(seq 1 $MAX_RETRIES); do
+              if git push origin main; then
+                echo "✅ Configuração Pulumi commitada"
+                break
+              else
+                echo "⚠️ Push falhou, tentativa $i/$MAX_RETRIES"
+                git pull origin main --rebase
+              fi
+            done
+          else
+            echo "ℹ️ Configuração Pulumi já está atualizada"
+          fi
           
           # Deploy com Pulumi
           echo "🚀 Executando Pulumi Up..."
