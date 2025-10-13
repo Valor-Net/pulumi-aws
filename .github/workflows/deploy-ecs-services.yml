@@ -111,15 +111,36 @@ jobs:
             --target "urn:pulumi:${STACK}::infra::awsx:ecs:FargateService::${SERVICE_NAME_BASE}" \
             --target-dependents
           
-          # Remover da fila
-          git pull origin main
+        echo "🧹 Removendo da fila..."
+        git pull origin main --rebase
+        
+        if [ -f "$REQUEST_FILE" ]; then
           rm "$REQUEST_FILE"
           git add "$REQUEST_FILE"
-          git commit -m "✅ Deployment concluído: ${SERVICE_NAME}"
-          git push origin main
           
-          echo "✅ Deployment concluído!"
-          echo ""
+          if ! git diff --staged --quiet; then
+            git commit -m "✅ Deployment concluído: ${SERVICE_NAME}"
+            
+            # Tenta push com retry
+            MAX_RETRIES=3
+            for i in $(seq 1 $MAX_RETRIES); do
+              if git push origin main; then
+                echo "✅ Push realizado com sucesso"
+                break
+              else
+                echo "⚠️ Push falhou, tentativa $i/$MAX_RETRIES"
+                git pull origin main --rebase
+              fi
+            done
+          else
+            echo "ℹ️ Nenhuma mudança para commitar (arquivo já foi removido)"
+          fi
+        else
+          echo "ℹ️ Arquivo já foi processado por outra execução"
+        fi
+        
+        echo "✅ Deployment concluído!"
+        echo ""
         done
         
         echo "🎉 Todos os deployments processados!"
