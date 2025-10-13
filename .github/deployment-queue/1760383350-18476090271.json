@@ -1,0 +1,10 @@
+{
+  "image_tag": "cb272dab",
+  "service_name": "users-service-f2cd918",
+  "stack": "staging-services",
+  "commit_sha": "cb272dab",
+  "ecr_repository": "staging-services-users-service-repo",
+  "ecs_cluster": "staging-services-cluster",
+  "requested_at": "2025-10-13 19:22:30 UTC",
+  "run_id": "18476090271"
+}
