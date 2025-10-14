@@ -13,7 +13,7 @@ config:
   valornet-infra:relaxing-sounds-service.imageTag: 298a853e
   valornet-infra:readiness-contents-service.imageTag: d7e41284
   valornet-infra:mental-service.imageTag: 4db43856
-  valornet-infra:podcasts-service.imageTag: 935b966c
+  valornet-infra:podcasts-service.imageTag: 2ee15d57
   valornet-infra:videos-service.imageTag: "34404981"
   valornet-infra:sleep-service.imageTag: e274375b
   valornet-infra:spiritual-service.imageTag: latest
