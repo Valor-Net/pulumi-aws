@@ -1,0 +1,10 @@
+{
+  "image_tag": "298a853e",
+  "service_name": "relaxing-sounds-service-e30ef3e",
+  "stack": "staging-services",
+  "commit_sha": "298a853e",
+  "ecr_repository": "staging-services-relaxing-sounds-service-repo",
+  "ecs_cluster": "staging-services-cluster",
+  "requested_at": "2025-10-14 17:15:44 UTC",
+  "run_id": "18504518836"
+}
