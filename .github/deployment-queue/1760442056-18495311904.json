@@ -1,0 +1,10 @@
+{
+  "image_tag": "cba902e6",
+  "service_name": "user-records-service-6a2772f",
+  "stack": "staging-services",
+  "commit_sha": "cba902e6",
+  "ecr_repository": "staging-services-user-records-service-repo",
+  "ecs_cluster": "staging-services-cluster",
+  "requested_at": "2025-10-14 11:40:56 UTC",
+  "run_id": "18495311904"
+}
