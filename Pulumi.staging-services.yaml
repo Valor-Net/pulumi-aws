@@ -22,7 +22,7 @@ config:
   valornet-infra:workouts-service.imageTag: latest
   valornet-infra:chat-service.imageTag: 84aa40bd
   valornet-infra:classes-service.imageTag: d416c9d4
-  valornet-infra:pdf-generator-service.imageTag: latest
+  valornet-infra:pdf-generator-service.imageTag: ea71fa67
   valornet-infra:call-request-service.imageTag: "60805538"
   valornet-infra:notifications-service.imageTag: 6169940a
   valornet-infra:telemedicine-service.imageTag: f9071d28

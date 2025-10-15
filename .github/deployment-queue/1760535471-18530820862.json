@@ -1,0 +1,10 @@
+{
+  "image_tag": "ea71fa67",
+  "service_name": "pdf-generator-service-worker-93cce6c",
+  "stack": "staging-services",
+  "commit_sha": "ea71fa67",
+  "ecr_repository": "staging-services-pdf-generator-service-repo",
+  "ecs_cluster": "staging-services-cluster",
+  "requested_at": "2025-10-15 13:37:51 UTC",
+  "run_id": "18530820862"
+}
