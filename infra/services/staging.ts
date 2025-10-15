@@ -277,6 +277,7 @@ workerServices.forEach((wsvc) => {
         REDIS_PORT:                 "6379",
         AWS_ACCOUNT_ID:             pulumi.interpolate`${accountId}`,
         AWS_DEFAULT_REGION:         aws.config.requireRegion(),
+        AWS_BUCKET:                 "valornet-assets",
         SQS_PREFIX:                 pulumi.interpolate`https://sqs.${aws.config.region}.amazonaws.com/${accountId}`,
         SQS_QUEUE:                  emailQueue,
         SQS_EMAIL_QUEUE:            emailQueue,
