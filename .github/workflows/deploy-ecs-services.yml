@@ -87,7 +87,7 @@ jobs:
           pulumi stack select "$STACK"
           
           SERVICE_NAME_BASE=${SERVICE_NAME%-*}
-          SERVICE_NAME_BASE=${SERVICE_NAME_BASE%-worker}
+          # SERVICE_NAME_BASE=${SERVICE_NAME_BASE%-worker}
           
           CONFIG_KEY="valornet-infra:${SERVICE_NAME_BASE}.imageTag"
           pulumi config set ${CONFIG_KEY} $IMAGE_TAG
