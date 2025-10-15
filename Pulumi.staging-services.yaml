@@ -31,5 +31,5 @@ config:
   valornet-infra:run-walking-service.imageTag: 0c7a2adc
   valornet-infra:pro-trainer-workouts-service.imageTag: 5d0f9888
   valornet-infra:user-records-service.imageTag: 3c5ad4e8
-  valornet-infra:pdf-generator-service-worker.imageTag: ea71fa67
+  valornet-infra:pdf-generator-service-worker.imageTag: 4fef7dfd
 encryptionsalt: v1:uw0kFASTyV0=:v1:9egG5d7hsTIQQwX8:2a3xPmNztRuGT3GKMkvS/zy2k9kcjg==
