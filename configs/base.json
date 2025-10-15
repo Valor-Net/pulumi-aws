@@ -11,10 +11,10 @@
     },
     "services": {
         "auth-service": {
-            "imageTag": "3d6fea80"
+            "imageTag": "c634c00f"
         },
         "email-service": {
-            "imageTag": "test"
+            "imageTag": "74bf983a"
          },
         "backoffice-service": {
             "imageTag": "initial"
@@ -27,37 +27,37 @@
             "type": "lambda"
         },
         "valornet-frontend": {
-            "imageTag": "dd30ddcc"
+            "imageTag": "ec6c15c7"
          },
         "users-service": {
-            "imageTag": "dc24d4cd"
+            "imageTag": "f5377148"
          },
         "brain-games-service": {
             "imageTag": "07c26a48"
          },
         "books-service": {
-            "imageTag": "b8dc3303"
+            "imageTag": "85bb82aa"
          },
         "nutritional-service":{
-            "imageTag": "latest"
+            "imageTag": "53ee94b9"
          },
         "resource-center-service": {
             "imageTag": "latest"
          },
         "relaxing-sounds-service": {
-            "imageTag": "latest"
+            "imageTag": "298a853e"
          },
         "readiness-contents-service":{
-            "imageTag": "d0340f90"
+            "imageTag": "d7e41284"
          },
         "mental-service": {
             "imageTag": "4db43856"
          },
         "podcasts-service": {
-            "imageTag": "d5a75d8d"
+            "imageTag": "2ee15d57"
          },
         "videos-service": {
-            "imageTag": "initial"
+            "imageTag": "a8675305"
          },
         "sleep-service": {
             "imageTag": "e274375b"
@@ -66,34 +66,46 @@
             "imageTag": "latest"
          },
         "landing-pages-service": {
-            "imageTag": "e01a9ee6"
+            "imageTag": "9fb08381"
          },
         "specialty-care-service": {
-            "imageTag": "latest"
+            "imageTag": "c85979ca"
          },
         "workouts-service": {
             "imageTag": "latest"
          },
         "chat-service": {
-            "imageTag": "05d98830"
+            "imageTag": "84aa40bd"
          },
         "classes-service": {
-            "imageTag": "latest"
+            "imageTag": "d416c9d4"
          },
         "pdf-generator-service": {
-            "imageTag": "latest"
+            "imageTag": "4fef7dfd"
          },
         "call-request-service": {
-            "imageTag": "2df80c2b"
+            "imageTag": "60805538"
          },
         "notifications-service": {
-            "imageTag": "initial"
+            "imageTag": "6169940a"
          },
         "telemedicine-service": {
-            "imageTag": "285ce79a"
+            "imageTag": "dd3075d1"
          },
         "events-service": {
-            "imageTag": "c34e4320"
+            "imageTag": "4a1b5c8c"
+         },
+         "group-challenges-service": {
+            "imageTag": "d936fd6b"
+         },
+         "run-walking-service": {
+            "imageTag": "0c7a2adc"
+         },
+         "pro-trainer-workouts-service": {
+            "imageTag": "5d0f9888"
+         },
+         "user-records-service": {
+            "imageTag": "3c5ad4e8"
          }
     }
   }
