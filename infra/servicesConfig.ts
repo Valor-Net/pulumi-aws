@@ -786,7 +786,7 @@ const workerServices: WorkerSvc[] = [
             aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
 
         ],
-        command: ["php", "artisan", "sqs:consume-email"]
+        command: ["php", "artisan", "queue:work", "raw_sqs", "--sleep=3", "--daemon", "--max-jobs=1000", "--max-time=3600"]
     },
     {
         name: servicesInitialConfig.pdfGeneratorService.name,
