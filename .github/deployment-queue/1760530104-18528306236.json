@@ -1,0 +1,10 @@
+{
+  "image_tag": "a8675305",
+  "service_name": "videos-service-3630b03",
+  "stack": "staging-services",
+  "commit_sha": "a8675305",
+  "ecr_repository": "staging-services-videos-service-repo",
+  "ecs_cluster": "staging-services-cluster",
+  "requested_at": "2025-10-15 12:08:24 UTC",
+  "run_id": "18528306236"
+}
