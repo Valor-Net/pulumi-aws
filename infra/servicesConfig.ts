@@ -219,6 +219,30 @@ const servicesInitialConfig: Record<string, ServiceInitialConfig> = {
         envName: "EventsService",
         repo:"staging-services-events-service-repo",
         sidecarRepo: "staging-services-events-service-nginx-repo",
+    },
+    groupChallenges: {
+        name: "group-challenges-service",
+        envName: "GroupChallengesService",
+        repo:"staging-services-group-challenges-service-repo",
+        sidecarRepo: "staging-services-group-challenges-service-nginx-repo",
+    },
+    runWalking: {
+        name: "run-walking-service",
+        envName: "RunWalkingService",
+        repo:"staging-services-run-walking-service-repo",
+        sidecarRepo: "staging-services-run-walking-service-nginx-repo",
+    },
+    proTrainerWorkouts: {
+        name: "pro-trainer-workouts-service",
+        envName: "ProTrainerWorkoutsService",
+        repo:"staging-services-pro-trainer-workouts-service-repo",
+        sidecarRepo: "staging-services-pro-trainer-workouts-service-nginx-repo",
+    },
+    userRecords: {
+        name: "user-records-service",
+        envName: "UserRecordsService",
+        repo:"staging-services-user-records-service-repo",
+        sidecarRepo: "staging-services-user-records-service-nginx-repo",
     }
 }
 
@@ -643,6 +667,78 @@ const laravelServices: HttpSvc[] = [
             aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
 
         ]
+    },
+    {
+        name: servicesInitialConfig.groupChallenges.name,
+        envName: servicesInitialConfig.groupChallenges.envName,
+        path: "group-challenges",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.groupChallenges.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.groupChallenges.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
+        ]
+    },
+    {
+        name: servicesInitialConfig.runWalking.name,
+        envName: servicesInitialConfig.runWalking.envName,
+        path: "run-walking",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.runWalking.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.runWalking.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
+        ]
+    },
+    {
+        name: servicesInitialConfig.proTrainerWorkouts.name,
+        envName: servicesInitialConfig.proTrainerWorkouts.envName,
+        path: "pro-trainer-workouts",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.proTrainerWorkouts.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.proTrainerWorkouts.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
+        ]
+    },
+    {
+        name: servicesInitialConfig.userRecords.name,
+        envName: servicesInitialConfig.userRecords.envName,
+        path: "user-records",
+        healthPath: "/health",
+        port: 9000,
+        imageRepo: servicesInitialConfig.userRecords.repo,
+        nginxSidecarImageRepo: servicesInitialConfig.userRecords.sidecarRepo,
+        tech: "laravel",
+        policies: [
+            aws.iam.ManagedPolicy.AmazonSQSFullAccess,
+            aws.iam.ManagedPolicy.SecretsManagerReadWrite,
+            aws.iam.ManagedPolicy.AmazonS3FullAccess,
+            aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
+            aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
+
+        ]
     }
 ]
 
@@ -690,7 +786,7 @@ const workerServices: WorkerSvc[] = [
             aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
 
         ],
-        command: ["php", "artisan", "sqs:consume-email"]
+        command: ["php", "artisan", "queue:work", "raw_sqs", "--sleep=3", "--daemon", "--max-jobs=1000", "--max-time=3600"]
     },
     {
         name: servicesInitialConfig.pdfGeneratorService.name,
@@ -704,7 +800,7 @@ const workerServices: WorkerSvc[] = [
             aws.iam.ManagedPolicy.AmazonSSMManagedInstanceCore,
             aws.iam.ManagedPolicy.CloudWatchAgentServerPolicy
         ],
-        command: ["php", "artisan", "queue:work", "pdf_raw_sqs", "--sleep=3", "--daemon", "--max-jobs=1000", "--max-time=3600"]
+        command: ["php", "artisan", "queue:work", "raw_sqs", "--sleep=3", "--daemon", "--max-jobs=1000", "--max-time=3600"]
     },
     {
         name: servicesInitialConfig.notifications.name,

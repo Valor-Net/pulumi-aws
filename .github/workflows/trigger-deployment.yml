@@ -1,0 +1,139 @@
+name: Update ECS Service Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Image tag to deploy'
+        required: true
+      service_name:
+        description: 'Service name'
+        required: true
+      stack:
+        description: 'Stack name'
+        required: true
+      commit_sha:
+        description: 'Commit SHA'
+        required: true
+      ecr_repository:
+        description: 'ECR Repository'
+        required: true
+      ecr_nginx_repository:
+        description: 'ECR Nginx Repository'
+        required: false
+      ecs_cluster:
+        description: 'ECS Cluster'
+        required: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.inputs.stack }}-${{ github.event.inputs.service_name }}
+  cancel-in-progress: false
+
+jobs:
+  update-service:
+    runs-on: ubuntu-latest
+    name: Deply - ${{ github.event.inputs.stack }} - ${{ github.event.inputs.service_name }}
+    permissions:
+      contents: write
+      id-token: write
+      actions: read
+
+    steps:
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.INFRA_REPO_TOKEN }}
+        persist-credentials: true
+
+    - name: Setup Node.js and PNPM
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@v3
+      with:
+        version: 9
+     
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile --ignore-scripts
+     
+    - name: Setup Pulumi
+      uses: pulumi/actions@v4
+      with:
+        pulumi-version: ^3.0.0
+        
+    - name: Save new image tag
+      run: |
+        
+        echo "⚙️ Atualizando configuração do Pulumi..."
+
+        pulumi login s3://valornet-pulumi-backend
+        
+        # Selecionar stack
+        pulumi stack select ${{ github.event.inputs.stack }}
+
+        SERVICE_NAME_BASE=${{ github.event.inputs.service_name }}
+        SERVICE_NAME_BASE=${SERVICE_NAME_BASE%-*}
+        SERVICE_NAME_BASE=${SERVICE_NAME_BASE%-worker}
+        
+        CONFIG_KEY="valornet-infra:${SERVICE_NAME_BASE}.imageTag"
+        echo "📝 Atualizando config: ${CONFIG_KEY} = ${{ github.event.inputs.image_tag }}"
+        pulumi config set ${CONFIG_KEY} ${{ github.event.inputs.image_tag }}
+
+        echo "✅ Configuração do Pulumi atualizada!"
+        echo "💾 Fazendo commit das mudanças..."
+        
+        git config --global user.email "ci@valornet.com"
+        git config --global user.name "CI/CD Bot"
+        
+        # Verificar se há mudanças
+        if git diff --quiet Pulumi.staging-services.yaml; then
+          echo "ℹ️ Nenhuma mudança para commit"
+        else
+          git add Pulumi.${{ github.event.inputs.stack }}.yaml
+          
+          git commit -m "🤖 ci: deploy ${{ github.event.inputs.service_name }} with tag ${{ github.event.inputs.image_tag }}
+          
+          📦 Stack: ${{ github.event.inputs.stack }}
+          🏷️ Image Tag: ${{ github.event.inputs.image_tag }}
+          📝 Commit SHA: ${{ github.event.inputs.commit_sha }}"
+          
+          git push origin main
+          echo "✅ Configuração commitada!"
+        fi
+        
+    - name: Deploy with Pulumi
+      env:
+        PULUMI_CONFIG_PASSPHRASE: ""
+        OAUTH_PRIVATE_KEY: ${{ secrets.STG_OAUTH_PRIVATE_KEY }}
+        OAUTH_PUBLIC_KEY: ${{ secrets.STG_OAUTH_PUBLIC_KEY }}
+      run: |
+        echo "🚀 Iniciando deploy com Pulumi..."
+        echo "🏷️ Nova imagem tag: ${{ github.event.inputs.image_tag }}"
+        echo "🎯 Serviço: ${{ github.event.inputs.service_name }}"
+        echo "📦 Stack: ${{ github.event.inputs.stack }}"
+
+        SERVICE_NAME_BASE=${{ github.event.inputs.service_name }}
+        SERVICE_NAME_BASE=${SERVICE_NAME_BASE%-*}
+
+        pulumi login s3://valornet-pulumi-backend
+
+        echo "📦 Instalando dependências do Pulumi..."
+        pulumi install
+        echo "✅ Dependências instaladas!"
+        
+        pulumi up --yes --stack ${{ github.event.inputs.stack }} --target urn:pulumi:${{ github.event.inputs.stack }}::infra::awsx:ecs:FargateService::${SERVICE_NAME_BASE} --target-dependents
+        
+        echo "🎉 Processo concluído!"
+        echo "📊 Resumo:"
+        echo "  - Stack: ${{ github.event.inputs.stack }}"
+        echo "  - Serviço: ${SERVICE_NAME_BASE}"
+        echo "  - Nova tag: ${{ github.event.inputs.image_tag }}"

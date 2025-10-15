@@ -241,7 +241,7 @@ const redis = createRedisCluster({
     subnetIds: vpc.privateSubnetIds,
     securityGroupIds: [sgRedis.id],
 });
-const initialTenants = ["demo"];
+const initialTenants = ["quest"];
 const clientsSecret = createManagedSecret(
     `tenants-${stack}-secret`,
     initialTenants,

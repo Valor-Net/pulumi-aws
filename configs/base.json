@@ -29,124 +29,103 @@
         }
     },
     "services": {
-        "http": {
-            "auth-service": {
-                "imageTag": "3d6fea80",
-                "path": "auth"
-            },
-            "users-service": {
-                "imageTag": "dc24d4cd",
-                "path": "users"
-            },
-            "brain-games-service": {
-                "imageTag": "07c26a48",
-                "path": "brain-games"
-            },
-            "books-service": {
-                "imageTag": "b8dc3303",
-                "path": "books"
-            },
-            "nutritional-service":{
-                "imageTag": "latest",
-                "path": "nutritional"
-            },
-            "resource-center-service": {
-                "imageTag": "latest",
-                "path": "resource-center"
-            },
-            "relaxing-sounds-service": {
-                "imageTag": "latest",
-                "path": "relaxing-sounds"
-            },
-            "spiritual-service": {
-                "imageTag": "latest",
-                "path": "spiritual"
-            },
-            "mental-service": {
-                "imageTag": "4db43856",
-                "path": "mental"
-            },
-            "specialty-care-service": {
-                "imageTag": "latest",
-                "path": "specialty-care"
-            },
-            "landing-pages-service": {
-                "imageTag": "e01a9ee6",
-                "path": "landing-pages"
-            },
-            "podcasts-service": {
-                "imageTag": "d5a75d8d",
-                "path": "podcasts"
-            },
-            "workouts-service": {
-                "imageTag": "latest",
-                "path": "workouts"
-            },
-            "videos-service": {
-                "imageTag": "initial",
-                "path": "videos"
-            },
-            "sleep-service": {
-                "imageTag": "e274375b",
-                "path": "sleep"
-            },
-            "readiness-contents-service":{
-                "imageTag": "d0340f90",
-                "path": "readiness-contents"
-            },
-            "chat-service": {
-                "imageTag": "05d98830",
-                "path": "chat"
-            },
-            "classes-service": {
-                "imageTag": "latest",
-                "path": "classes"
-            },
-            "call-request-service": {
-                "imageTag": "2df80c2b",
-                "path": "call-request"
-            },
-            "telemedicine-service": {
-                "imageTag": "285ce79a",
-                "path": "telemedicine"
-            },
-            "events-service": {
-                "imageTag": "c34e4320",
-                "path": "events"
-            },
-            "backoffice-service": {
-                "imageTag": "initial",
-                "path": "backoffice",
-                "tech": "go"
-            }
+        "auth-service": {
+            "imageTag": "c634c00f"
         },
-        "worker": {
-            "notifications-service": {
-                "imageTag": "initial",
-                "command": ["php", "artisan", "queue:work", "raw_sqs", "--sleep=3", "--daemon", "--max-jobs=1000", "--max-time=3600"]
-            },
-            "pdf-generator-service": {
-                "imageTag": "latest",
-                "command": ["php", "artisan", "queue:work", "pdf_raw_sqs", "--sleep=3", "--daemon", "--max-jobs=2000", "--max-time=7200"]
-            },
-            "email-service": {
-                "imageTag": "test",
-                "command": ["php", "artisan", "queue:work", "raw_sqs", "--sleep=3", "--daemon", "--max-jobs=1000", "--max-time=3600"]
-            }
+        "email-service": {
+            "imageTag": "74bf983a"
+         },
+        "backoffice-service": {
+            "imageTag": "initial"
+         },
+        "valornet-backoffice-frontend": {
+            "imageTag": "initial"
+         },
+        "file-processor-lambda-service": {
+            "imageTag": "twelve", 
+            "type": "lambda"
         },
-        "lambda": {
-            "file-processor-lambda-service": {
-                "imageTag": "twelve"
-            }
-        },
-        "frontend": {   
-            "valornet-backoffice-frontend": {
-                "imageTag": "initial"
-            },
-            "valornet-frontend": {
-                "imageTag": "dd30ddcc"
-            }
-        }
+        "valornet-frontend": {
+            "imageTag": "ec6c15c7"
+         },
+        "users-service": {
+            "imageTag": "f5377148"
+         },
+        "brain-games-service": {
+            "imageTag": "07c26a48"
+         },
+        "books-service": {
+            "imageTag": "85bb82aa"
+         },
+        "nutritional-service":{
+            "imageTag": "53ee94b9"
+         },
+        "resource-center-service": {
+            "imageTag": "latest"
+         },
+        "relaxing-sounds-service": {
+            "imageTag": "298a853e"
+         },
+        "readiness-contents-service":{
+            "imageTag": "d7e41284"
+         },
+        "mental-service": {
+            "imageTag": "4db43856"
+         },
+        "podcasts-service": {
+            "imageTag": "2ee15d57"
+         },
+        "videos-service": {
+            "imageTag": "a8675305"
+         },
+        "sleep-service": {
+            "imageTag": "e274375b"
+         },
+        "spiritual-service": {
+            "imageTag": "latest"
+         },
+        "landing-pages-service": {
+            "imageTag": "9fb08381"
+         },
+        "specialty-care-service": {
+            "imageTag": "c85979ca"
+         },
+        "workouts-service": {
+            "imageTag": "latest"
+         },
+        "chat-service": {
+            "imageTag": "84aa40bd"
+         },
+        "classes-service": {
+            "imageTag": "d416c9d4"
+         },
+        "pdf-generator-service": {
+            "imageTag": "4fef7dfd"
+         },
+        "call-request-service": {
+            "imageTag": "60805538"
+         },
+        "notifications-service": {
+            "imageTag": "6169940a"
+         },
+        "telemedicine-service": {
+            "imageTag": "dd3075d1"
+         },
+        "events-service": {
+            "imageTag": "4a1b5c8c"
+         },
+         "group-challenges-service": {
+            "imageTag": "d936fd6b"
+         },
+         "run-walking-service": {
+            "imageTag": "0c7a2adc"
+         },
+         "pro-trainer-workouts-service": {
+            "imageTag": "5d0f9888"
+         },
+         "user-records-service": {
+            "imageTag": "3c5ad4e8"
+         }
     }
   }
   
