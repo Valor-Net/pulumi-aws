@@ -1,0 +1,10 @@
+{
+  "image_tag": "199fb452",
+  "service_name": "notifications-service-worker-9c8e09b",
+  "stack": "staging-services",
+  "commit_sha": "199fb452",
+  "ecr_repository": "staging-services-notifications-service-repo",
+  "ecs_cluster": "staging-services-cluster",
+  "requested_at": "2025-10-16 19:56:49 UTC",
+  "run_id": "18573154600"
+}
