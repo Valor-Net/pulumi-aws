@@ -1,0 +1,10 @@
+{
+  "image_tag": "835f67f2",
+  "service_name": "mental-service-8ff57ec",
+  "stack": "staging-services",
+  "commit_sha": "835f67f2",
+  "ecr_repository": "staging-services-mental-service-repo",
+  "ecs_cluster": "staging-services-cluster",
+  "requested_at": "2025-10-17 14:11:51 UTC",
+  "run_id": "18595321456"
+}
