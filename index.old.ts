@@ -3,8 +3,11 @@ import * as pulumi from "@pulumi/pulumi";
 const stack = pulumi.getStack();
 
 const stackMap: Record<string, () => any> = {
-    "base-core":    () => require("./infra/core"),
-    
+    "staging-core":    () => require("./infra/core/staging"),
+    "staging-services": () => require("./infra/services/staging"),
+    "dev-core":        () => require("./infra/core/dev"),
+    "production-core": () => require("./infra/core/production"),
+    "production-services": () => require("./infra/services/production"),
 };
 
 const loader = stackMap[stack];

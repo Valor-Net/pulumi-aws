@@ -35,7 +35,7 @@ type DefaultsByKind = {
   };
 };
 
-type BaseJson = {
+export type BaseJson = {
   defaults: DefaultsByKind;
   services: {
     http: Record<
@@ -236,19 +236,14 @@ const resolvePolicies = (policies?: string[]): string[] => {
  * - padrão histórico: "<env>-services-<service>-repo"
  * Obs.: se quiser outro padrão, ajuste aqui centralmente.
  */
-const deriveRepos = (opts: {
+export const deriveRepos = (opts: {
     stack: string;
-    environment: string;
+    environment?: string;
     serviceName: string; // "auth-service"
     sidecar?: boolean;
 }) => {
-    const env = opts.environment; // "staging" | "production" | ...
-    // Heurística: se o stack contém "-services", segue <env>-services-<name>-repo
-    const isServices = opts.stack.includes("-services");
-    const base = isServices
-        ? `${env}-services-${opts.serviceName}`
-        : `${env}-core-${opts.serviceName}`;
 
+    const base = `${opts.stack}-${opts.serviceName}`;
     const imageRepo = `${base}-repo`;
     const nginxSidecarImageRepo = opts.sidecar ? `${base}-nginx-repo` : undefined;
 
@@ -291,11 +286,16 @@ const loadJson = <T>(filePath: string): T => {
 export const resolveConfig = (params?: {
     basePath?: string;      // default: "configs/base.json"
     customerPath?: string;  // ex: "configs/customers/quest.staging.json"
+    baseOnly?: boolean;     // se true, não carrega o customer
 }): ResolvedConfig => {
     const stack = pulumi.getStack();
 
     const baseFile = params?.basePath ?? path.join("configs", "base.json");
     const base = loadJson<BaseJson>(baseFile);
+
+    if (params?.baseOnly) {
+        return base as unknown as ResolvedConfig;
+    }
 
     const customerFile =
         params?.customerPath ??
