@@ -1,0 +1,10 @@
+{
+  "image_tag": "782a979b",
+  "service_name": "group-challenges-service-2fa8971",
+  "stack": "staging-services",
+  "commit_sha": "782a979b",
+  "ecr_repository": "staging-services-group-challenges-service-repo",
+  "ecs_cluster": "staging-services-cluster",
+  "requested_at": "2025-10-20 18:44:28 UTC",
+  "run_id": "18661653613"
+}
