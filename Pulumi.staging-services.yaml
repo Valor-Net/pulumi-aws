@@ -27,7 +27,7 @@ config:
   valornet-infra:notifications-service.imageTag: 4874fcf0
   valornet-infra:telemedicine-service.imageTag: dd3075d1
   valornet-infra:events-service.imageTag: 4a1b5c8c
-  valornet-infra:group-challenges-service.imageTag: d3e01c9d
+  valornet-infra:group-challenges-service.imageTag: 782a979b
   valornet-infra:run-walking-service.imageTag: 0c7a2adc
   valornet-infra:pro-trainer-workouts-service.imageTag: 5d0f9888
   valornet-infra:user-records-service.imageTag: 3c5ad4e8
