@@ -31,136 +31,162 @@
     "services": {
         "http": {
             "auth-service": {
-                "imageTag": "c634c00f",
-                "path": "auth"
+                "imageTag": "latest",
+                "path": "auth",
+                "nginxSidecar": true
             },
             "users-service": {
-                "imageTag": "f5377148",
-                "path": "users"
+                "imageTag": "latest",
+                "path": "users",
+                "nginxSidecar": true
             },
             "brain-games-service": {
-                "imageTag": "07c26a48",
-                "path": "brain-games"
+                "imageTag": "latest",
+                "path": "brain-games",
+                "nginxSidecar": true
             },
             "books-service": {
-                "imageTag": "85bb82aa",
-                "path": "books"
+                "imageTag": "latest",
+                "path": "books",
+                "nginxSidecar": true
             },
             "nutritional-service":{
-                "imageTag": "53ee94b9",
-                "path": "nutritional"
+                "imageTag": "latest",
+                "path": "nutritional",
+                "nginxSidecar": true
             },
             "resource-center-service": {
                 "imageTag": "latest",
-                "path": "resource-center"
+                "path": "resource-center",
+                "nginxSidecar": true
             },
             "relaxing-sounds-service": {
-                "imageTag": "298a853e",
-                "path": "relaxing-sounds"
+                "imageTag": "latest",
+                "path": "relaxing-sounds",
+                "nginxSidecar": true
             },
             "spiritual-service": {
                 "imageTag": "latest",
-                "path": "spiritual"
+                "path": "spiritual",
+                "nginxSidecar": true
             },
             "mental-service": {
-                "imageTag": "4db43856",
-                "path": "mental"
+                "imageTag": "latest",
+                "path": "mental",
+                "nginxSidecar": true
             },
             "specialty-care-service": {
-                "imageTag": "c85979ca",
-                "path": "specialty-care"
+                "imageTag": "latest",
+                "path": "specialty-care",
+                "nginxSidecar": true
             },
             "landing-pages-service": {
-                "imageTag": "9fb08381",
-                "path": "landing-pages"
+                "imageTag": "latest",
+                "path": "landing-pages",
+                "nginxSidecar": true
             },
             "podcasts-service": {
-                "imageTag": "2ee15d57",
-                "path": "podcasts"
+                "imageTag": "latest",
+                "path": "podcasts",
+                "nginxSidecar": true
             },
             "workouts-service": {
                 "imageTag": "latest",
-                "path": "workouts"
+                "path": "workouts",
+                "nginxSidecar": true
             },
             "videos-service": {
-                "imageTag": "a8675305",
-                "path": "videos"
+                "imageTag": "latest",
+                "path": "videos",
+                "nginxSidecar": true
             },
             "sleep-service": {
-                "imageTag": "e274375b",
-                "path": "sleep"
+                "imageTag": "latest",
+                "path": "sleep",
+                "nginxSidecar": true
             },
             "readiness-contents-service":{
-                "imageTag": "d7e41284",
-                "path": "readiness-contents"
+                "imageTag": "latest",
+                "path": "readiness-contents",
+                "nginxSidecar": true
             },
             "chat-service": {
-                "imageTag": "84aa40bd",
-                "path": "chat"
+                "imageTag": "latest",
+                "path": "chat",
+                "nginxSidecar": true
             },
             "classes-service": {
-                "imageTag": "d416c9d4",
-                "path": "classes"
+                "imageTag": "latest",
+                "path": "classes",
+                "nginxSidecar": true
             },
             "call-request-service": {
-                "imageTag": "2df80c2b",
-                "path": "call-request"
+                "imageTag": "latest",
+                "path": "call-request",
+                "nginxSidecar": true
             },
             "telemedicine-service": {
-                "imageTag": "dd3075d1",
-                "path": "telemedicine"
+                "imageTag": "latest",
+                "path": "telemedicine",
+                "nginxSidecar": true
             },
             "events-service": {
-                "imageTag": "4a1b5c8c",
-                "path": "events"
+                "imageTag": "latest",
+                "path": "events",
+                "nginxSidecar": true
             },
             "backoffice-service": {
-                "imageTag": "initial",
+                "imageTag": "latest",
                 "path": "backoffice",
+                "nginxSidecar": true,
                 "tech": "go"
             },
             "group-challenges-service": {
-                "imageTag": "d936fd6b",
-                "path": "backoffice"
+                "imageTag": "latest",
+                "path": "backoffice",
+                "nginxSidecar": true
             },
             "run-walking-service": {
-                "imageTag": "0c7a2adc",
-                "path": "backoffice"
+                "imageTag": "latest",
+                "path": "backoffice",
+                "nginxSidecar": true
             },
             "pro-trainer-workouts-service": {
-                "imageTag": "5d0f9888",
-                "path": "backoffice"
+                "imageTag": "latest",
+                "path": "backoffice",
+                "nginxSidecar": true
             },
             "user-records-service": {
-                "imageTag": "3c5ad4e8",
-                "path": "user-records"
+                "imageTag": "latest",
+                "path": "user-records",
+                "nginxSidecar": true
             }
         },
         "worker": {
             "notifications-service": {
-                "imageTag": "6169940a",
+                "imageTag": "latest",
                 "command": ["php", "artisan", "queue:work", "raw_sqs", "--sleep=3", "--daemon", "--max-jobs=1000", "--max-time=3600"]
             },
             "pdf-generator-service": {
-                "imageTag": "4fef7dfd",
+                "imageTag": "latest",
                 "command": ["php", "artisan", "queue:work", "raw_sqs", "--sleep=3", "--daemon", "--max-jobs=2000", "--max-time=7200"]
             },
             "email-service": {
-                "imageTag": "74bf983a",
+                "imageTag": "latest",
                 "command": ["php", "artisan", "queue:work", "raw_sqs", "--sleep=3", "--daemon", "--max-jobs=1000", "--max-time=3600"]
             }
         },
         "lambda": {
             "file-processor-lambda-service": {
-                "imageTag": "twelve"
+                "imageTag": "latest"
             }
         },
         "frontend": {   
             "valornet-backoffice-frontend": {
-                "imageTag": "initial"
+                "imageTag": "latest"
             },
             "valornet-frontend": {
-                "imageTag": "dd30ddcc"
+                "imageTag": "latest"
             }
         }
     }

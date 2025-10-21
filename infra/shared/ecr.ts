@@ -16,8 +16,8 @@ export const createEcrRepo = (name: string, stack: string, config: ServiceInitia
         policy: pulumi.interpolate`{
             "rules": [{
                 "rulePriority": 1,
-                "description": "Keep last 3 images",
-                "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 3 },
+                "description": "Keep last 5 images",
+                "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 5 },
                 "action": { "type": "expire" }
             }]
         }`,

@@ -21,22 +21,21 @@ const ecrRepos: Record<string, pulumi.Output<string>> = {};
 for (const [name, config] of [...Object.entries(baseConfig.services.http), ...Object.entries(baseConfig.services.worker), ...Object.entries(baseConfig.services.lambda), ...Object.entries(baseConfig.services.frontend)]) {
 
     const { imageRepo, nginxSidecarImageRepo } = deriveRepos({
-        stack,
         serviceName: name,
         sidecar: config.nginxSidecar ?? false,
     });
     
-    const repo = createEcrRepo(config.imageRepo, stack, {
+    const repo = createEcrRepo(imageRepo, stack, {
         name: name,
-        repo: config.imageRepo,
+        repo: imageRepo,
     } as ServiceInitialConfig);
 
     ecrRepos[name] = repo.repositoryUrl;
 
-    if(config.nginxSidecarImageRepo) {
-        const sidecarRepo = createEcrRepo(config.nginxSidecarImageRepo, stack, {
+    if(nginxSidecarImageRepo) {
+        const sidecarRepo = createEcrRepo(nginxSidecarImageRepo, stack, {
             name: name + "-nginx",
-            repo: config.nginxSidecarImageRepo,
+            repo: nginxSidecarImageRepo,
         } as ServiceInitialConfig);
         ecrRepos[name + "-nginx"] = sidecarRepo.repositoryUrl;
     }

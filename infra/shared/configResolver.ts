@@ -57,6 +57,7 @@ export type BaseJson = {
         command?: string[]; // para workers
         queues?: string[];
         policies?: string[];
+        nginxSidecar?: boolean;
       }
     >;
     lambda: Record<
@@ -66,6 +67,7 @@ export type BaseJson = {
         triggeredBy?: string[];
         policies?: string[];
         env?: Record<string, string>;
+        nginxSidecar?: boolean;
       }
     >;
     frontend: Record<
@@ -82,6 +84,7 @@ export type BaseJson = {
           subdomain: string;
           customSettings?: Record<string, any>;
         }>;
+        nginxSidecar?: boolean;
       }
     >;
   };
@@ -237,13 +240,14 @@ const resolvePolicies = (policies?: string[]): string[] => {
  * Obs.: se quiser outro padrão, ajuste aqui centralmente.
  */
 export const deriveRepos = (opts: {
-    stack: string;
+    stack?: string;
     environment?: string;
     serviceName: string; // "auth-service"
     sidecar?: boolean;
 }) => {
 
-    const base = `${opts.stack}-${opts.serviceName}`;
+    const base = `base-core-${opts.serviceName}`;
+
     const imageRepo = `${base}-repo`;
     const nginxSidecarImageRepo = opts.sidecar ? `${base}-nginx-repo` : undefined;
 
