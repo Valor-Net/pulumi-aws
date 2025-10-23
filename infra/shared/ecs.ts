@@ -15,7 +15,7 @@ export function buildImageUrl(repo: string, imageTag: string): pulumi.Output<str
 }
 
 export function makeHttpFargate(args: {
-    svc: { name: string; imageRepo: string, imageTag: string,  port: number };
+    svc: { name: string; imageRepo: string, imageTag: string,  port: number, cpu: number, memory: number };
     clusterArn: pulumi.Input<string>;
     tg: aws.lb.TargetGroup;
     sgIds: pulumi.Input<string>[];
@@ -35,8 +35,8 @@ export function makeHttpFargate(args: {
     const phpContainer = {
         name: args.svc.name,
         image: buildImageUrl(args.svc.imageRepo, args.svc.imageTag),
-        cpu: 256,
-        memory: 512,
+        cpu: args.svc.cpu,
+        memory: args.svc.memory,
         portMappings: args.nginxSidecarImageRepo
             ? undefined
             : [{
@@ -88,6 +88,7 @@ export function makeHttpFargate(args: {
     }
     
     return new awsx.ecs.FargateService(`${args.svc.name}`, {
+        name: args.svc.name,
         forceNewDeployment: true,
         cluster: args.clusterArn,
         desiredCount: 1,
@@ -128,7 +129,8 @@ export function makeWorkerFargate(args: {
     });
   
 
-    return new awsx.ecs.FargateService(`${args.svc.name}-worker`, {
+    return new awsx.ecs.FargateService(args.svc.name, {
+        name: args.svc.name,
         cluster: args.clusterArn,
         desiredCount: 1,
         serviceRegistries: args.serviceDiscovery ? {

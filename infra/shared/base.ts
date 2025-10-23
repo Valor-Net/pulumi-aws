@@ -1,6 +1,5 @@
 // infra/base-core/index.ts
 import * as pulumi from "@pulumi/pulumi";
-import { ServiceInitialConfig } from "../servicesConfig";
 import { BaseJson, deriveRepos, resolveConfig } from "../shared/configResolver";
 import { createEcrRepo } from "../shared/ecr";
 
@@ -28,7 +27,7 @@ for (const [name, config] of [...Object.entries(baseConfig.services.http), ...Ob
     const repo = createEcrRepo(imageRepo, stack, {
         name: name,
         repo: imageRepo,
-    } as ServiceInitialConfig);
+    });
 
     ecrRepos[name] = repo.repositoryUrl;
 
@@ -36,7 +35,7 @@ for (const [name, config] of [...Object.entries(baseConfig.services.http), ...Ob
         const sidecarRepo = createEcrRepo(nginxSidecarImageRepo, stack, {
             name: name + "-nginx",
             repo: nginxSidecarImageRepo,
-        } as ServiceInitialConfig);
+        });
         ecrRepos[name + "-nginx"] = sidecarRepo.repositoryUrl;
     }
 }

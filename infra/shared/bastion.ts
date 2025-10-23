@@ -5,6 +5,7 @@ export interface BastionConfig {
     vpcId: Input<string>;
     publicSubnetId: Input<string>;
     keyName: Input<string>;
+    instanceType: string;
 }
 
 
@@ -21,7 +22,7 @@ export function createBastionHost(name: string, config: BastionConfig, sgId: Inp
 
     return new aws.ec2.Instance(name, {
         ami: ami.then(a => a.id),
-        instanceType: "t3.micro",
+        instanceType: config.instanceType,
         subnetId: config.publicSubnetId,
         keyName: config.keyName,
         vpcSecurityGroupIds: [sgId],

@@ -1,8 +1,7 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
-import { ServiceInitialConfig } from '../servicesConfig';
 
-export const createEcrRepo = (name: string, stack: string, config: ServiceInitialConfig) => {
+export const createEcrRepo = (name: string, stack: string, config: any) => {
     const repo = new aws.ecr.Repository(name, {
         name: name,
         imageScanningConfiguration: { scanOnPush: false },

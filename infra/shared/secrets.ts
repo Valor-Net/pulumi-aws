@@ -1,7 +1,7 @@
 import * as aws from "@pulumi/aws";
 import * as pulumi from "@pulumi/pulumi";
 import * as fs from "fs";
-import { frontendServices } from "../servicesConfig";
+
 
 // Cache para evitar criação duplicada de secrets
 const secretCache = new Map<string, aws.secretsmanager.Secret>();
@@ -131,41 +131,3 @@ export function createManagedSecret(name: string, initialValue: any, description
     return secret;
 }
 
-
-export function getTenantSecret(stack: string, tenantName: string): aws.secretsmanager.Secret {
-    const secretName = `${stack}-${tenantName}-secret`;
-    
-    if (secretCache.has(secretName)) {
-        return secretCache.get(secretName)!;
-    }
-    
-    const customSettings = getTenantCustomSettings(tenantName);
-    
-    const finalSettings = Object.keys(customSettings).length > 0 
-        ? customSettings 
-        : {};
-    
-    console.log(`🔑 getTenantSecret: Criando secret para tenant: ${tenantName}`);
-    
-    const tenantSecret = createManagedSecret(
-        secretName,
-        finalSettings,
-        `Secret for tenant ${tenantName} - managed by TenantProviderService`
-    );
-    
-    return tenantSecret;
-}
-
-/**
- * Busca configurações customizadas de um tenant nos frontendServices
- */
-export function getTenantCustomSettings(tenantName: string): any {
-    for (const svc of frontendServices) {
-        const tenantConfig = svc.supportedTenants.find(t => t.tenant === tenantName);
-        if (tenantConfig) {
-            console.log(`📋 Configurações encontradas para tenant ${tenantName}:`, tenantConfig.customSettings);
-            return tenantConfig.customSettings;
-        }
-    }
-    return {};
-}

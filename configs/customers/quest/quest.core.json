@@ -1,0 +1,292 @@
+{
+    "customer": "quest",
+    "domain": "quest.valornetvets.com",
+    "vpc": {
+      "cidrBlock": "10.0.0.0/16",
+      "enableDnsHostnames": true,
+      "azCount": 2
+    },
+    "securityGroups": {
+      "bastion": {
+        "ingress": [
+          {
+            "fromPort": 22,
+            "toPort": 22,
+            "protocol": "tcp",
+            "cidrBlocks": ["0.0.0.0/0"],
+            "description": "SSH access"
+          }
+        ]
+      },
+      "alb": {
+        "ingress": [
+          {
+            "fromPort": 80,
+            "toPort": 80,
+            "protocol": "tcp",
+            "cidrBlocks": ["10.0.0.0/16"],
+            "description": "Internal HTTP"
+          }
+        ]
+      },
+      "tasks": {
+        "ingress": [
+          {
+            "fromPort": 80,
+            "toPort": 80,
+            "protocol": "tcp",
+            "sourceSecurityGroup": "alb",
+            "description": "HTTP from ALB"
+          },
+          {
+            "fromPort": 9000,
+            "toPort": 9000,
+            "protocol": "tcp",
+            "sourceSecurityGroup": "alb",
+            "description": "PHP-FPM from ALB"
+          },
+          {
+            "fromPort": 8080,
+            "toPort": 8080,
+            "protocol": "tcp",
+            "sourceSecurityGroup": "alb",
+            "description": "Go service from ALB"
+          },
+          {
+            "fromPort": 0,
+            "toPort": 65535,
+            "protocol": "tcp",
+            "self": true,
+            "description": "Inter-task communication"
+          }
+        ]
+      },
+      "db": {
+        "ingress": [
+          {
+            "fromPort": 3306,
+            "toPort": 3306,
+            "protocol": "tcp",
+            "sourceSecurityGroups": ["tasks", "bastion"],
+            "description": "MySQL access"
+          }
+        ]
+      },
+      "redis": {
+        "ingress": [
+          {
+            "fromPort": 6379,
+            "toPort": 6379,
+            "protocol": "tcp",
+            "sourceSecurityGroup": "tasks",
+            "description": "Redis access"
+          }
+        ]
+      },
+      "frontend": {
+        "ingress": [
+          {
+            "fromPort": 80,
+            "toPort": 80,
+            "protocol": "tcp",
+            "cidrBlocks": ["0.0.0.0/0"],
+            "description": "HTTP from internet"
+          },
+          {
+            "fromPort": 443,
+            "toPort": 443,
+            "protocol": "tcp",
+            "cidrBlocks": ["0.0.0.0/0"],
+            "description": "HTTPS from internet"
+          },
+          {
+            "fromPort": 3000,
+            "toPort": 3000,
+            "protocol": "tcp",
+            "cidrBlocks": ["0.0.0.0/0"],
+            "description": "Next.js dev port"
+          }
+        ],
+        "egress": [
+          {
+            "fromPort": 443,
+            "toPort": 443,
+            "protocol": "tcp",
+            "cidrBlocks": ["0.0.0.0/0"],
+            "description": "HTTPS outbound"
+          },
+          {
+            "fromPort": 0,
+            "toPort": 0,
+            "protocol": "-1",
+            "cidrBlocks": ["0.0.0.0/0"],
+            "description": "All outbound"
+          }
+        ]
+      },
+      "vpcEndpoints": {
+        "ingress": [
+          {
+            "fromPort": 443,
+            "toPort": 443,
+            "protocol": "tcp",
+            "sourceSecurityGroups": ["tasks", "frontend"],
+            "description": "HTTPS from tasks and frontend"
+          }
+        ]
+      }
+    },
+    "vpcEndpoints": [
+      {
+        "name": "secretsmanager",
+        "serviceName": "secretsmanager",
+        "privateDnsEnabled": true
+      },
+      {
+        "name": "sqs",
+        "serviceName": "sqs",
+        "privateDnsEnabled": true
+      }
+    ],
+    "bastion": {
+      "enabled": true,
+      "instanceType": "t3.micro",
+      "keyName": "pulumi-bastion-key"
+    },
+    "rds": {
+      "staging": {
+        "identifier": "quest-staging-rds",
+        "dbName": "staging",
+        "username": "quest",
+        "instanceClass": "db.t3.micro",
+        "allocatedStorage": 20,
+        "engine": "mysql",
+        "engineVersion": "8.0",
+        "publiclyAccessible": false,
+        "backupRetentionPeriod": 7,
+        "skipFinalSnapshot": false,
+        "multiAz": false
+      },
+      "production": {
+        "identifier": "quest-prod-rds",
+        "dbName": "production",
+        "username": "quest",
+        "instanceClass": "db.t3.small",
+        "allocatedStorage": 50,
+        "engine": "mysql",
+        "engineVersion": "8.0",
+        "publiclyAccessible": false,
+        "backupRetentionPeriod": 30,
+        "skipFinalSnapshot": false,
+        "multiAz": true
+      }
+    },
+    "redis": {
+      "staging": {
+        "nodeType": "cache.t3.micro",
+        "numCacheNodes": 1,
+        "engineVersion": "redis7"
+      },
+      "production": {
+        "nodeType": "cache.t3.small",
+        "numCacheNodes": 1,
+        "engineVersion": "redis7"
+      }
+    },
+    "sqs": {
+      "queues": [
+        {
+          "name": "notifications",
+          "visibilityTimeoutSeconds": 540,
+          "messageRetentionSeconds": 1209600,
+          "maxReceiveCount": 3,
+          "tags": {
+            "Project": "quest"
+          }
+        },
+        {
+          "name": "email",
+          "visibilityTimeoutSeconds": 540,
+          "messageRetentionSeconds": 1209600,
+          "maxReceiveCount": 3,
+          "tags": {
+            "Project": "quest"
+          }
+        },
+        {
+          "name": "pdf",
+          "visibilityTimeoutSeconds": 600,
+          "messageRetentionSeconds": 1209600,
+          "maxReceiveCount": 3,
+          "tags": {
+            "Project": "quest"
+          }
+        }
+      ]
+    },
+    "alb": {
+      "backend": {
+        "staging": {
+          "name": "quest-stg-bcknd",
+          "internal": true,
+          "enableHttp2": true,
+          "idleTimeout": 60
+        },
+        "production": {
+          "name": "quest-prd-bcknd",
+          "internal": true,
+          "enableHttp2": true,
+          "idleTimeout": 60
+        }
+      },
+      "frontend": {
+        "staging": {
+          "name": "quest-stg-frntnd",
+          "internal": false,
+          "enableHttp2": true,
+          "idleTimeout": 60
+        },
+        "production": {
+          "name": "quest-prd-frntnd",
+          "internal": false,
+          "enableHttp2": true,
+          "idleTimeout": 60
+        }
+      }
+    },
+    "apiGateway": {
+      "staging": {
+        "name": "quest-staging-api",
+        "domain": "stg-api-quest.valornetvets.com",
+        "certificateArn": "arn:aws:acm:us-east-1:331240720676:certificate/be56385a-0d8e-4ec0-807a-958622aea2d5"
+      },
+      "production": {
+        "name": "quest-prod-api",
+        "domain": "api-quest.valornetvets.com",
+        "certificateArn": "arn:aws:acm:us-east-1:331240720676:certificate/be56385a-0d8e-4ec0-807a-958622aea2d5"
+      }
+    },
+    "vpcLink": {
+      "staging": {
+        "name": "quest-staging-vpclink"
+      },
+      "production": {
+        "name": "quest-prod-vpclink"
+      }
+    },
+    "privateDns": {
+      "namespace": "quest.local",
+      "description": "Private DNS namespace for Quest services"
+    },
+    "secrets": {
+      "agora": {
+        "name": "agora-tokens",
+        "description": "Agora RTC tokens"
+      }
+    },
+    "tags": {
+      "Customer": "Quest",
+      "ManagedBy": "Pulumi",
+      "Project": "ValorNet"
+    }
+  }

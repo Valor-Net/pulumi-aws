@@ -11,7 +11,12 @@ interface RdsArgs {
     dbEngine?: "mysql" | "postgres";
     username: string;
     password: Input<string>;
-    publicAccessible: boolean
+    publicAccessible: boolean;
+    engine: string;
+    engineVersion: string;
+    backupRetentionPeriod: number;
+    skipFinalSnapshot: boolean;
+    multiAz: boolean;
 }
 
 export function createRdsInstance(args: RdsArgs): aws.rds.Instance {
@@ -21,16 +26,16 @@ export function createRdsInstance(args: RdsArgs): aws.rds.Instance {
 
     return new aws.rds.Instance(args.name, {
         allocatedStorage: args.allocatedStorage ?? 20,
-        engine: "mysql",
-        engineVersion: "8.0",
+        engine: args.engine,
+        engineVersion: args.engineVersion,
         instanceClass: args.instanceClass ?? "db.t3.micro",
         dbName: args.dbName,
         username: args.username,
         password: args.password,
         dbSubnetGroupName: subnetGroup.name,
         vpcSecurityGroupIds: args.vpcSecurityGroupIds,
-        skipFinalSnapshot: true,
+        skipFinalSnapshot: args.skipFinalSnapshot,
         publiclyAccessible: args.publicAccessible,
-        multiAz: false,
+        multiAz: args.multiAz,
     });
 }

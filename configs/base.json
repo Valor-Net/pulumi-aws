@@ -12,7 +12,7 @@
             "port": 9000,
             "healthPath": "/health",
             "tech": "laravel",
-            "policies": ["bundle:laravel-min"]
+            "policies": ["bundle:laravel-full"]
         },
         "frontend": {
             "port": 3000,
@@ -21,10 +21,10 @@
             "policies": ["bundle:nextjs-min"]
         },
         "worker": {
-            "policies": ["bundle:laravel-min"]
+            "policies": ["bundle:laravel-full"]
         },
         "lambda": {
-            "policies": ["bundle:laravel-min"],
+            "policies": ["bundle:laravel-full"],
             "triggeredBy": ["s3"]
         }
     },
@@ -135,25 +135,19 @@
                 "path": "events",
                 "nginxSidecar": true
             },
-            "backoffice-service": {
-                "imageTag": "latest",
-                "path": "backoffice",
-                "nginxSidecar": true,
-                "tech": "go"
-            },
             "group-challenges-service": {
                 "imageTag": "latest",
-                "path": "backoffice",
+                "path": "group-challenges",
                 "nginxSidecar": true
             },
             "run-walking-service": {
                 "imageTag": "latest",
-                "path": "backoffice",
+                "path": "run-walking",
                 "nginxSidecar": true
             },
             "pro-trainer-workouts-service": {
                 "imageTag": "latest",
-                "path": "backoffice",
+                "path": "pro-trainer-workouts",
                 "nginxSidecar": true
             },
             "user-records-service": {
@@ -177,15 +171,12 @@
             }
         },
         "lambda": {
-            "file-processor-lambda-service": {
+            "file-processor-service": {
                 "imageTag": "latest"
             }
         },
         "frontend": {   
-            "valornet-backoffice-frontend": {
-                "imageTag": "latest"
-            },
-            "valornet-frontend": {
+            "admin": {
                 "imageTag": "latest"
             }
         }

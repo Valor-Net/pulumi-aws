@@ -2,7 +2,7 @@
     "customer": "quest",
     "environment": "production",
     "enable": ["*"],
-    "disable": [],
+    "disable": ["backoffice-service", "valornet-backoffice-frontend"],
     "overrides": {}
   }
   

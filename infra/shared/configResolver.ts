@@ -3,6 +3,132 @@ import * as pulumi from "@pulumi/pulumi";
 import * as fs from "fs";
 import * as path from "path";
 
+export interface CoreConfig {
+    customer: string;
+    domain: string;
+    vpc: {
+        cidrBlock: string;
+        enableDnsHostnames: boolean;
+        enableDnsSupport: boolean;
+        azCount: number;
+    };
+    securityGroups: Record<string, any>;
+    vpcEndpoints: Array<{
+        name: string;
+        serviceName: string;
+        privateDnsEnabled: boolean;
+    }>;
+    bastion?: {
+        enabled: boolean;
+        instanceType: string;
+        keyName: string;
+    };
+    rds: {
+        staging: RdsConfig;
+        production: RdsConfig;
+    };
+    redis: {
+        staging: RedisConfig;
+        production: RedisConfig;
+    };
+    sqs: {
+        queues: Array<QueueConfig>;
+    };
+    alb: {
+        backend: {
+            staging: AlbConfig;
+            production: AlbConfig;
+        };
+        frontend: {
+            staging: AlbConfig;
+            production: AlbConfig;
+        };
+    };
+    apiGateway: {
+        staging: ApiGatewayConfig;
+        production: ApiGatewayConfig;
+    };
+    vpcLink: {
+        staging: { name: string };
+        production: { name: string };
+    };
+    privateDns: {
+        namespace: string;
+        description: string;
+    };
+    secrets?: Record<string, any>;
+    tags?: Record<string, string>;
+}
+
+interface RdsConfig {
+    identifier: string;
+    dbName: string;
+    username: string;
+    instanceClass: string;
+    allocatedStorage: number;
+    engine: string;
+    engineVersion: string;
+    publiclyAccessible: boolean;
+    backupRetentionPeriod: number;
+    skipFinalSnapshot: boolean;
+    multiAz: boolean;
+}
+
+interface RedisConfig {
+    nodeType: string;
+    numCacheNodes: number;
+    engineVersion: string;
+}
+
+interface QueueConfig {
+    name: string;
+    visibilityTimeoutSeconds: number;
+    messageRetentionSeconds: number;
+    maxReceiveCount: number;
+    tags?: Record<string, string>;
+}
+
+export interface AlbConfig {
+    name: string;
+    internal: boolean;
+    enableHttp2: boolean;
+    idleTimeout: number;
+}
+
+interface ApiGatewayConfig {
+    name: string;
+    domain: string;
+    certificateArn: string;
+}
+
+export interface ServiceConfig {
+    customer: string;
+    environment: string;
+    enable: string[];
+    disable?: string[];
+    overrides: {
+        global?: any;
+        http?: Record<string, any>;
+        worker?: Record<string, any>;
+        lambda?: Record<string, any>;
+        frontend?: Record<string, any>;
+    };
+}
+
+export interface BaseConfig {
+    defaults: {
+        ecs: {
+            cpu: number;
+            memory: number;
+            env: Record<string, any>;
+        };
+    };
+    services: Record<string, {
+        imageTag: string;
+        type?: string;
+    }>;
+}
+
 /** ===== Tipos de entrada (JSONs) ===== */
 type ServiceKind = "http" | "worker" | "lambda" | "frontend";
 
@@ -198,6 +324,8 @@ const policyBundles: Record<string, string[]> = {
         aws.iam.ManagedPolicy.AWSLambdaBasicExecutionRole,
     ],
 };
+
+
 
 /** ===== Helpers ===== */
 const deepMerge = <T extends object>(base: T, override: Partial<T>): T => {
@@ -489,3 +617,21 @@ export const resolveConfig = (params?: {
         frontend,
     };
 };
+
+/**
+ * Resolve configuration for core infrastructure
+ */
+export function resolveCoreConfig(customerCoreConfigPath: string): CoreConfig {
+    const absolutePath = path.resolve(process.cwd(), customerCoreConfigPath);
+    
+    if (!fs.existsSync(absolutePath)) {
+        throw new Error(`Core config file not found: ${absolutePath}`);
+    }
+
+    const rawConfig = fs.readFileSync(absolutePath, "utf8");
+    const config = JSON.parse(rawConfig) as CoreConfig;
+
+    console.log(`✅ Loaded core config for customer: ${config.customer}`);
+    
+    return config;
+}

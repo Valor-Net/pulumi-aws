@@ -6,11 +6,11 @@ export function createAlb(
     name: string,
     vpc: awsx.ec2.Vpc,
     securityGroupIds?: Input<Input<string>[]>,
-    isPublic: boolean = false,
+    isPublic: boolean = true,
 ): awsx.lb.ApplicationLoadBalancer {
     return new awsx.lb.ApplicationLoadBalancer(name, {
         name: name,
-        internal: !isPublic,
+        internal: isPublic,
         securityGroups: securityGroupIds
             ?? vpc.vpc.defaultSecurityGroupId.apply(id => [id]),
         subnetIds: isPublic ? vpc.publicSubnetIds : vpc.privateSubnetIds,
@@ -18,14 +18,16 @@ export function createAlb(
 }
 
 export function createTgAndRule(args: {
+    tgName: string,
+    ruleName: string,
     albArn: Input<string>;
     listenerArn: Input<string>;
-    svc: { name: string; healthPath?: string, path: string, port: number };
+    svc: { healthPath?: string, path: string, port: number };
     vpcId: Input<string>;
     priority: number;
 }) {
-    const tg = new aws.lb.TargetGroup(`tg-${args.svc.name}`, {
-        name: `tg-${args.svc.name}`,
+    const tg = new aws.lb.TargetGroup(args.tgName, {
+        name: args.tgName,
         vpcId: args.vpcId,
         port: args.svc.port,
         protocol: "HTTP",
@@ -33,7 +35,7 @@ export function createTgAndRule(args: {
         healthCheck: { path: args.svc.healthPath ?? "/health" },
     });
   
-    new aws.lb.ListenerRule(`rule-${args.svc.name}`, {
+    new aws.lb.ListenerRule(args.ruleName, {
         listenerArn: args.listenerArn,
         priority: args.priority,
         actions: [{ type: "forward", targetGroupArn: tg.arn }],
