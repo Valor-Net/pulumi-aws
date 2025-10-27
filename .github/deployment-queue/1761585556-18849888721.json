@@ -1,0 +1,10 @@
+{
+  "image_tag": "586c2a22",
+  "service_name": "valornet-frontend-6a6036a",
+  "stack": "staging-services",
+  "commit_sha": "586c2a22",
+  "ecr_repository": "staging-services-valornet-frontend-repo",
+  "ecs_cluster": "staging-services-cluster",
+  "requested_at": "2025-10-27 17:19:16 UTC",
+  "run_id": "18849888721"
+}
