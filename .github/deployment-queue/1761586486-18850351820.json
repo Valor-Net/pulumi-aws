@@ -1,0 +1,10 @@
+{
+  "image_tag": "d19cbb60",
+  "service_name": "podcasts-service-2cefbca",
+  "stack": "staging-services",
+  "commit_sha": "d19cbb60",
+  "ecr_repository": "staging-services-podcasts-service-repo",
+  "ecs_cluster": "staging-services-cluster",
+  "requested_at": "2025-10-27 17:34:46 UTC",
+  "run_id": "18850351820"
+}
