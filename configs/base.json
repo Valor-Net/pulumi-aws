@@ -31,127 +31,127 @@
     "services": {
         "http": {
             "auth-service": {
-                "imageTag": "latest",
+                "imageTag": "01newstruct",
                 "path": "auth",
                 "nginxSidecar": true
             },
             "users-service": {
-                "imageTag": "latest",
+                "imageTag": "01newstruct",
                 "path": "users",
                 "nginxSidecar": true
             },
             "brain-games-service": {
-                "imageTag": "latest",
+                "imageTag": "01newstruct",
                 "path": "brain-games",
                 "nginxSidecar": true
             },
             "books-service": {
-                "imageTag": "latest",
+                "imageTag": "01newstruct",
                 "path": "books",
                 "nginxSidecar": true
             },
             "nutritional-service":{
-                "imageTag": "latest",
+                "imageTag": "01newstruct",
                 "path": "nutritional",
                 "nginxSidecar": true
             },
             "resource-center-service": {
-                "imageTag": "latest",
+                "imageTag": "01newstruct",
                 "path": "resource-center",
                 "nginxSidecar": true
             },
             "relaxing-sounds-service": {
-                "imageTag": "latest",
+                "imageTag": "01newstruct",
                 "path": "relaxing-sounds",
                 "nginxSidecar": true
             },
             "spiritual-service": {
-                "imageTag": "latest",
+                "imageTag": "01newstruct",
                 "path": "spiritual",
                 "nginxSidecar": true
             },
             "mental-service": {
-                "imageTag": "latest",
+                "imageTag": "01newstruct",
                 "path": "mental",
                 "nginxSidecar": true
             },
             "specialty-care-service": {
-                "imageTag": "latest",
+                "imageTag": "01newstruct",
                 "path": "specialty-care",
                 "nginxSidecar": true
             },
             "landing-pages-service": {
-                "imageTag": "latest",
+                "imageTag": "01newstruct",
                 "path": "landing-pages",
                 "nginxSidecar": true
             },
             "podcasts-service": {
-                "imageTag": "latest",
+                "imageTag": "01newstruct",
                 "path": "podcasts",
                 "nginxSidecar": true
             },
             "workouts-service": {
-                "imageTag": "latest",
+                "imageTag": "01newstruct",
                 "path": "workouts",
                 "nginxSidecar": true
             },
             "videos-service": {
-                "imageTag": "latest",
+                "imageTag": "01newstruct",
                 "path": "videos",
                 "nginxSidecar": true
             },
             "sleep-service": {
-                "imageTag": "latest",
+                "imageTag": "01newstruct",
                 "path": "sleep",
                 "nginxSidecar": true
             },
             "readiness-contents-service":{
-                "imageTag": "latest",
+                "imageTag": "01newstruct",
                 "path": "readiness-contents",
                 "nginxSidecar": true
             },
             "chat-service": {
-                "imageTag": "latest",
+                "imageTag": "01newstruct",
                 "path": "chat",
                 "nginxSidecar": true
             },
             "classes-service": {
-                "imageTag": "latest",
+                "imageTag": "01newstruct",
                 "path": "classes",
                 "nginxSidecar": true
             },
             "call-request-service": {
-                "imageTag": "latest",
+                "imageTag": "01newstruct",
                 "path": "call-request",
                 "nginxSidecar": true
             },
             "telemedicine-service": {
-                "imageTag": "latest",
+                "imageTag": "01newstruct",
                 "path": "telemedicine",
                 "nginxSidecar": true
             },
             "events-service": {
-                "imageTag": "latest",
+                "imageTag": "01newstruct",
                 "path": "events",
                 "nginxSidecar": true
             },
             "group-challenges-service": {
-                "imageTag": "latest",
+                "imageTag": "01newstruct",
                 "path": "group-challenges",
                 "nginxSidecar": true
             },
             "run-walking-service": {
-                "imageTag": "latest",
+                "imageTag": "01newstruct",
                 "path": "run-walking",
                 "nginxSidecar": true
             },
             "pro-trainer-workouts-service": {
-                "imageTag": "latest",
+                "imageTag": "01newstruct",
                 "path": "pro-trainer-workouts",
                 "nginxSidecar": true
             },
             "user-records-service": {
-                "imageTag": "latest",
+                "imageTag": "01newstruct",
                 "path": "user-records",
                 "nginxSidecar": true
             }

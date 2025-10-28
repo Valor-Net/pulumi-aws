@@ -1,6 +1,6 @@
 {
-    "customer": "quest",
-    "environment": "staging",
+    "customer": "thriveone",
+    "environment": "production",
     "enable": ["*"],
     "disable": ["backoffice-service", "valornet-backoffice-frontend"],
     "overrides": {}

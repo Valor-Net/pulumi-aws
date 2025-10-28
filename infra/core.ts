@@ -265,13 +265,13 @@ const apiGateways: Record<string, any> = {};
         );
     });
 
-    const stage = createStage(`${env}-stage`, httpApi.id, "$default");
+    const stage = createStage(`${stack}-${env}-stage`, httpApi.id, "$default");
     const domain = createDomainName(
-        `${env}-api-domain`,
+        `${stack}-${env}-api-domain`,
         coreConfig.apiGateway[env as env].domain,
         coreConfig.apiGateway[env as env].certificateArn
     );
-    createApiMapping(`${env}-api-map`, httpApi.id, domain.id, stage.name, "");
+    createApiMapping(`${stack}-${env}-api-map`, httpApi.id, domain.id, stage.name, "");
 
     apiGateways[env] = {
         httpApi,
@@ -288,7 +288,7 @@ const privateDnsNs = new aws.servicediscovery.PrivateDnsNamespace(`${stack}-serv
     description: coreConfig.privateDns.description,
 });
 
-/* Secrets (per environment) ------------------------------------ */
+
 
 /* Secrets (per environment) ------------------------------------ */
 const secrets: Record<string, Record<string, any>> = {
@@ -331,6 +331,52 @@ const secrets: Record<string, Record<string, any>> = {
 
     secrets[env].general = generalSecret;
 });
+
+const buckets: Record<string, any> = {};
+/* Bucket (per environment) ------------------------------------ */
+["staging", "production"].forEach((env) => {
+    const bucket = new aws.s3.Bucket(`${customer}-${env}-assets`, {
+        bucket: `${customer}-${env}-assets`,
+        tags: {
+            Environment: env,
+            Name: `${customer}-${env}-assets`,
+        },
+    });
+
+    const pba = new aws.s3.BucketPublicAccessBlock(`${customer}-${env}-public-access-block`, {
+        bucket: bucket.id,
+        blockPublicAcls: false,
+        blockPublicPolicy: false,
+        ignorePublicAcls: false,
+        restrictPublicBuckets: false,
+    }, {dependsOn: bucket});
+
+    new aws.s3.BucketPolicy(`${customer}-${env}-policy`, {
+        bucket: bucket.id,
+        policy: pulumi.all([bucket.arn]).apply(([arn]) => JSON.stringify({
+            Version: "2012-10-17",
+            Statement: [{
+                Effect: "Allow",
+                Principal: "*",
+                Action: "s3:GetObject",
+                Resource: `${arn}/*`,
+            }],
+        })),
+    }, {dependsOn: pba});
+
+    new aws.s3.BucketServerSideEncryptionConfigurationV2(`${customer}-${env}-encryption`, {
+        bucket: bucket.id,
+        rules: [{
+            applyServerSideEncryptionByDefault: {
+                sseAlgorithm: "AES256",
+            },
+        }],
+    });
+    
+
+    buckets[env] = bucket;
+})
+
 export function getExports() {
     return {
         // VPC
@@ -394,6 +440,9 @@ export function getExports() {
 
             // Secrets
             generalSecretArn: secrets.staging.general.arn,
+
+            // Bucket
+            bucket: buckets.staging.id,
         },
 
         // Production Resources
@@ -439,6 +488,9 @@ export function getExports() {
 
             // Secrets
             generalSecretArn: secrets.production.general.arn,
+
+            // Bucket
+            bucket: buckets.production.id,
         },
 
         // VPC Endpoints

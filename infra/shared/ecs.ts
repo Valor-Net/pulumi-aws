@@ -232,7 +232,7 @@ export function createEcsExecutionRole(name: string): aws.iam.Role {
 }
 
 export function createSdService(name: string, nsId: pulumi.Input<string>) {
-    return new aws.servicediscovery.Service(`${name}-sd`, {
+    return new aws.servicediscovery.Service(name, {
       name,
       dnsConfig: {
         namespaceId: nsId,

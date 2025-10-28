@@ -37,6 +37,34 @@ $SERVICES = @(
 #     "admin"
 # )
 
+$SERVICES = @(
+    "auth-service",
+    "books-service",
+    "brain-games-service",
+    "call-request-service",
+    "chat-service",
+    "classes-service",
+    "events-service",
+    "group-challenges-service",
+    "landing-pages-service",
+    "meditations-service",
+    "mental-service",
+    "nutritional-service",
+    "podcasts-service",
+    "pro-trainer-workouts-service",
+    "readiness-contents-service",
+    "relaxing-sounds-service",
+    "resource-center-service",
+    "run-walking-service",
+    "sleep-service",
+    "specialty-care-service",
+    "spiritual-service",
+    "telemedicine-service",
+    "user-records-service",
+    "users-service",
+    "workouts-service"
+)
+
 Write-Host "Fazendo login no ECR..." -ForegroundColor Cyan
 aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin "$ACCOUNT.dkr.ecr.$REGION.amazonaws.com"
 
@@ -44,38 +72,29 @@ foreach ($SERVICE in $SERVICES) {
     Write-Host "=========================================" -ForegroundColor Green
     Write-Host "Processando: $SERVICE" -ForegroundColor Green
     Write-Host "=========================================" -ForegroundColor Green
-    
-    $SOURCE = "$ACCOUNT.dkr.ecr.$REGION.amazonaws.com/staging-services-$SERVICE-repo:latest"
-    $TARGET = "$ACCOUNT.dkr.ecr.$REGION.amazonaws.com/base-core-$SERVICE-repo:latest"
 
-    # if($SERVICE -eq "admin"){
-    #     $SOURCE = "$ACCOUNT.dkr.ecr.$REGION.amazonaws.com/staging-services-valornet-frontend-repo:latest"
-    # }
+    cd "D:\projetos\ValorNet\$SERVICE"
+    
+    docker build -t $SERVICE .
 
-    # if($SERVICE -eq "file-processor-service"){
-    #     $SOURCE = "$ACCOUNT.dkr.ecr.$REGION.amazonaws.com/staging-services-file-processor-lambda-service-repo:latest"
-    # }
+    $TARGET_SERVICE = $SERVICE
 
-    $NGINX_SOURCE = "$ACCOUNT.dkr.ecr.$REGION.amazonaws.com/staging-services-$SERVICE-nginx-repo:latest"
-    $NGINX_TARGET = "$ACCOUNT.dkr.ecr.$REGION.amazonaws.com/base-core-$SERVICE-nginx-repo:latest"
+    if($SERVICE -eq "meditations-service"){
+        $TARGET_SERVICE = "videos-service"
+    }
+
+    $TARGET_REPO = "$ACCOUNT.dkr.ecr.$REGION.amazonaws.com/base-core-$TARGET_SERVICE-repo:01newstruct"
+    $NGINX_TARGET_REPO = "$ACCOUNT.dkr.ecr.$REGION.amazonaws.com/base-core-$TARGET_SERVICE-nginx-repo:01newstruct"
+
+    docker tag "$SERVICE`:latest" $TARGET_REPO
+
+    docker push $TARGET_REPO
+
+    docker build -f docker/nginx/Dockerfile -t "$SERVICE-nginx" docker/nginx
+
+    docker tag "$SERVICE-nginx:latest" $NGINX_TARGET_REPO
     
-    Write-Host "Pulling $SOURCE..." -ForegroundColor Yellow
-    docker pull $SOURCE
-    
-    Write-Host "Tagging para $TARGET..." -ForegroundColor Yellow
-    docker tag $SOURCE $TARGET
-    
-    Write-Host "Pushing $TARGET..." -ForegroundColor Yellow
-    docker push $TARGET
-    
-    Write-Host "Pulling NGINX $NGINX_SOURCE..." -ForegroundColor Yellow
-    docker pull $NGINX_SOURCE
-    
-    Write-Host "Tagging para NGINX $NGINX_TARGET..." -ForegroundColor Yellow
-    docker tag $NGINX_SOURCE $NGINX_TARGET
-    
-    Write-Host "Pushing NGINX $NGINX_TARGET..." -ForegroundColor Yellow
-    docker push $NGINX_TARGET
+    docker push $NGINX_TARGET_REPO
     
     Write-Host "✓ Concluído: $SERVICE" -ForegroundColor Cyan
     Write-Host ""
@@ -84,3 +103,48 @@ foreach ($SERVICE in $SERVICES) {
 Write-Host "=========================================" -ForegroundColor Green
 Write-Host "Migração concluída!" -ForegroundColor Green
 Write-Host "=========================================" -ForegroundColor Green
+
+# foreach ($SERVICE in $SERVICES) {
+#     Write-Host "=========================================" -ForegroundColor Green
+#     Write-Host "Processando: $SERVICE" -ForegroundColor Green
+#     Write-Host "=========================================" -ForegroundColor Green
+    
+#     $SOURCE = "$ACCOUNT.dkr.ecr.$REGION.amazonaws.com/staging-services-$SERVICE-repo:latest"
+#     $TARGET = "$ACCOUNT.dkr.ecr.$REGION.amazonaws.com/base-core-$SERVICE-repo:latest"
+
+#     # if($SERVICE -eq "admin"){
+#     #     $SOURCE = "$ACCOUNT.dkr.ecr.$REGION.amazonaws.com/staging-services-valornet-frontend-repo:latest"
+#     # }
+
+#     # if($SERVICE -eq "file-processor-service"){
+#     #     $SOURCE = "$ACCOUNT.dkr.ecr.$REGION.amazonaws.com/staging-services-file-processor-lambda-service-repo:latest"
+#     # }
+
+#     $NGINX_SOURCE = "$ACCOUNT.dkr.ecr.$REGION.amazonaws.com/staging-services-$SERVICE-nginx-repo:latest"
+#     $NGINX_TARGET = "$ACCOUNT.dkr.ecr.$REGION.amazonaws.com/base-core-$SERVICE-nginx-repo:latest"
+    
+#     Write-Host "Pulling $SOURCE..." -ForegroundColor Yellow
+#     docker pull $SOURCE
+    
+#     Write-Host "Tagging para $TARGET..." -ForegroundColor Yellow
+#     docker tag $SOURCE $TARGET
+    
+#     Write-Host "Pushing $TARGET..." -ForegroundColor Yellow
+#     docker push $TARGET
+    
+#     Write-Host "Pulling NGINX $NGINX_SOURCE..." -ForegroundColor Yellow
+#     docker pull $NGINX_SOURCE
+    
+#     Write-Host "Tagging para NGINX $NGINX_TARGET..." -ForegroundColor Yellow
+#     docker tag $NGINX_SOURCE $NGINX_TARGET
+    
+#     Write-Host "Pushing NGINX $NGINX_TARGET..." -ForegroundColor Yellow
+#     docker push $NGINX_TARGET
+    
+#     Write-Host "✓ Concluído: $SERVICE" -ForegroundColor Cyan
+#     Write-Host ""
+# }
+
+# Write-Host "=========================================" -ForegroundColor Green
+# Write-Host "Migração concluída!" -ForegroundColor Green
+# Write-Host "=========================================" -ForegroundColor Green

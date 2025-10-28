@@ -35,8 +35,6 @@ console.log(`   Worker Services: ${config.worker.length}`);
 console.log(`   Lambda Services: ${config.lambda.length}`);
 console.log(`   Frontend Services: ${config.frontend.length}`);
 
-// Get base-core outputs
-const ecrRepos = baseCore.getOutput("ecrRepos");
 
 // Get quest-core outputs (environment-specific)
 const envConfig = questCore.requireOutput(environment);
@@ -68,6 +66,8 @@ const notificationsQueue = envConfig.apply((config: any) => config.notifications
 const apiGatewayId = envConfig.apply((config: any) => config.apiGatewayId);
 const albIntegrationId = envConfig.apply((config: any) => config.albIntegrationId);
 
+const bucketId = envConfig.apply((config: any) => config.bucket);
+
 const caller = aws.getCallerIdentity({});
 const accountId = caller.then(c => c.accountId);
 
@@ -97,8 +97,17 @@ config.http.forEach((svc, idx) => {
 
     const svcNameArr = svc.name.split('-');
     const svcNameReduced = `${svcNameArr[0]}-svc`;
-    const tgName = `${customer}-${envReduced}-${svcNameReduced}-tg`;
-    const ruleName = `${customer}-${envReduced}-${svcNameReduced}-rl`;
+    const smallSvcName = `${svcNameArr[0].substring(0, 5)}-svc`;
+    let tgName = `${customer}-${envReduced}-${svcNameReduced}-tg`;
+    let ruleName = `${customer}-${envReduced}-${svcNameReduced}-rl`;
+
+    if(tgName.length > 32){
+        tgName = `${customer}-${envReduced}-${smallSvcName}-tg`;
+    }
+
+    if(tgName.length > 32){
+        ruleName = `${customer}-${envReduced}-${smallSvcName}-rl`;
+    }
 
     // Create target group and ALB rule
     const targetPort = svc.nginxSidecar ? 80 : svc.port;
@@ -135,7 +144,7 @@ config.http.forEach((svc, idx) => {
     if (svc.tech === "laravel") {
         Object.assign(env, {
             APP_DEBUG: environment === "staging" ? "true" : "false",
-            APP_URL: `https://${environment === "staging" ? "stg" : "api"}.${customer}.valornetvets.com`,
+            APP_URL: `https://${configCore.apiGateway[environment as "staging" | "production"].domain}`,
             QUEUE_CONNECTION: "sqs",
             REDIS_CLIENT: "phpredis",
             REDIS_HOST: redisEndpoint,
@@ -145,7 +154,7 @@ config.http.forEach((svc, idx) => {
             SQS_EMAIL_QUEUE: emailQueue,
             SQS_NOTIFICATIONS_QUEUE: notificationsQueue,
             SQS_PDF_QUEUE: pdfQueue,
-            AWS_BUCKET: "valornet-assets",
+            AWS_BUCKET: bucketId,
             TENANT_SECRET_NAME: `${customer}-core-secret`,
             DB_CONNECTION: "mysql",
             FILESYSTEM_DISK: "s3",
@@ -192,7 +201,7 @@ config.http.forEach((svc, idx) => {
 
     // Service Discovery (for auth and users)
     const serviceDiscovery = (svc.path === "auth" || svc.path === "users")
-        ? createSdService(svc.name, privDnsNsId)
+        ? createSdService(`${stack}-${svcNameReduced}-sd`, privDnsNsId)
         : undefined;
 
     // Get ECR repo URL
@@ -243,14 +252,14 @@ config.worker.forEach((wsvc) => {
         APP_NAME: wsvc.name,
         APP_ENV: environment,
         APP_DEBUG: environment === "staging" ? "true" : "false",
-        APP_URL: `https://${environment === "staging" ? "stg" : "api"}.${customer}.valornetvets.com`,
+        APP_URL: `https://${configCore.apiGateway[environment as "staging" | "production"].domain}`,
         QUEUE_CONNECTION: "sqs",
         REDIS_CLIENT: "phpredis",
         REDIS_HOST: redisEndpoint,
         REDIS_PORT: "6379",
         AWS_ACCOUNT_ID: pulumi.interpolate`${accountId}`,
         AWS_DEFAULT_REGION: aws.config.requireRegion(),
-        AWS_BUCKET: "valornet-assets",
+        AWS_BUCKET: bucketId,
         SQS_PREFIX: pulumi.interpolate`https://sqs.${aws.config.region}.amazonaws.com/${accountId}`,
         SQS_QUEUE: emailQueue,
         SQS_EMAIL_QUEUE: emailQueue,
@@ -296,7 +305,7 @@ config.lambda.forEach((lsvc) => {
     const env: Record<string, pulumi.Input<string>> = {
         ...lsvc.ecs.env,
         ENVIRONMENT: environment,
-        S3_BUCKET: "valornet-assets",
+        S3_BUCKET: bucketId,
         S3_PROCESSED_FOLDER: "/processed",
         S3_ORIGINAL_FOLDER: "/uploads",
     };
@@ -316,7 +325,7 @@ config.lambda.forEach((lsvc) => {
 
     const lambda = makeLambdaService({
         svc: {
-            name: lsvc.name,
+            name: `${stack}-${lsvc.name}`,
             imageRepo: imageRepoUrl,
             imageTag: lsvc.imageTag || "latest",
         },
@@ -328,7 +337,7 @@ config.lambda.forEach((lsvc) => {
 
     // S3 trigger (if configured)
     if (lsvc.triggeredBy.includes("s3")) {
-        const bucket = aws.s3.Bucket.get("valornet-assets-bucket-ref", "valornet-assets");
+        const bucket = aws.s3.Bucket.get(`${bucketId}-bucket-ref`, bucketId);
 
         const lambdaPermission = new aws.lambda.Permission(`${stack}-${lsvc.name}-s3-permission`, {
             action: "lambda:InvokeFunction",
@@ -359,13 +368,29 @@ config.frontend.forEach((fsvc, idx) => {
     console.log(`🌐 Deploying Frontend service: ${fsvc.name}`);
 
     const hostHeaders = [configCore.domain]
+
+    const svcNameArr = fsvc.name.split('-');
+    const svcNameReduced = `${svcNameArr[0]}-svc`;
+    const smallSvcName = `${svcNameArr[0].substring(0, 5)}-svc`;
+    let tgName = `${customer}-${envReduced}-${svcNameReduced}-tg`;
+    let ruleName = `${customer}-${envReduced}-${svcNameReduced}-rl`;
+
+    if(tgName.length > 32){
+        tgName = `${customer}-${envReduced}-${smallSvcName}-tg`;
+    }
+
+    if(tgName.length > 32){
+        ruleName = `${customer}-${envReduced}-${smallSvcName}-rl`;
+    }
     
     const frontendTg = createFrontendTgAndRule({
+        tgName,
+        ruleName,
         albArn: frontendAlbArn,
         listenerArn: frontendHttpsListenerArn,
         svc: { name: fsvc.name, port: fsvc.port },
         vpcId: vpcId,
-        priority: 10 + idx,
+        priority: 5 + idx,
         hostHeaders,
     });
 
@@ -379,10 +404,10 @@ config.frontend.forEach((fsvc, idx) => {
         ...(fsvc.env || {}), // Service-specific env from config
         NODE_ENV: environment,
         PORT: fsvc.port.toString(),
-        API_ENDPOINT: `https://${environment === "staging" ? "stg" : "api"}.${customer}.valornetvets.com`,
+        API_ENDPOINT: `https://${configCore.apiGateway[environment as "staging" | "production"].domain}`,
         SUPPORTED_TENANTS: JSON.stringify((fsvc.tenants || []).map((t) => t.tenant)),
         TENANT: customer,
-        NEXT_PUBLIC_FILES_URL: "https://valornet-assets.s3.us-east-1.amazonaws.com/uploads",
+        NEXT_PUBLIC_FILES_URL: `https://${bucketId}.s3.us-east-1.amazonaws.com/uploads`,
     };
 
     // Frontend-specific overrides

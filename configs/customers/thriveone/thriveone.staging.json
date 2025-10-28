@@ -1,5 +1,5 @@
 {
-    "customer": "quest",
+    "customer": "thriveone",
     "environment": "staging",
     "enable": ["*"],
     "disable": ["backoffice-service", "valornet-backoffice-frontend"],
