@@ -1,8 +1,18 @@
 {
-    "customer": "quest",
-    "environment": "staging",
-    "enable": ["*"],
-    "disable": ["backoffice-service", "valornet-backoffice-frontend"],
-    "overrides": {}
+  "customer": "quest",
+  "environment": "staging",
+  "enable": [
+    "*"
+  ],
+  "disable": [
+    "backoffice-service",
+    "valornet-backoffice-frontend"
+  ],
+  "overrides": {
+    "http": {
+      "books-service": {
+        "imageTag": ""
+      }
+    }
   }
-  
+}
