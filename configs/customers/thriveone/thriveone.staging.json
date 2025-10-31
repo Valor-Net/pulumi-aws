@@ -3,6 +3,12 @@
     "environment": "staging",
     "enable": ["*"],
     "disable": ["backoffice-service", "valornet-backoffice-frontend"],
-    "overrides": {}
+    "overrides": {
+        "http": {
+          "books-service": {
+            "imageTag": "stg-v1.1.0"
+          }
+        }
+      }
   }
   

@@ -191,12 +191,12 @@ config.http.forEach((svc, idx) => {
     // Inter-service communication URLs
     if (svc.path !== "auth") {
         const dnsNamespace = questCore.getOutput("privDnsNamespace");
-        env.AUTH_SERVICE_JWKS_URL = pulumi.interpolate`http://auth-service.${dnsNamespace}/auth/v1/.well-known/jwks.json`;
+        env.AUTH_SERVICE_JWKS_URL = pulumi.interpolate`http://${stack}-auth-svc-sd.${dnsNamespace}/auth/v1/.well-known/jwks.json`;
     }
 
     if (svc.path === "telemedicine") {
         const dnsNamespace = questCore.getOutput("privDnsNamespace");
-        env.USERS_SERVICE_URL = pulumi.interpolate`http://users-service.${dnsNamespace}/users/v1`;
+        env.USERS_SERVICE_URL = pulumi.interpolate`http://${stack}-users-svc-sd.${dnsNamespace}/users/v1`;
     }
 
     // Service Discovery (for auth and users)
@@ -399,27 +399,21 @@ config.frontend.forEach((fsvc, idx) => {
         policies: fsvc.policies || [],
     });
 
+    const baseUrl = envReduced === 'stg' ? `https://stg-${configCore.domain}` : `https://${configCore.domain}`;
+    const projectName = configCore.customer;
+    const capitalizedName =  projectName.charAt(0).toUpperCase() + projectName.slice(1);
+
     const env: Record<string, pulumi.Input<string>> = {
         ...fsvc.ecs.env,
         ...(fsvc.env || {}), // Service-specific env from config
         NODE_ENV: environment,
         PORT: fsvc.port.toString(),
         API_ENDPOINT: `https://${configCore.apiGateway[environment as "staging" | "production"].domain}`,
-        SUPPORTED_TENANTS: JSON.stringify((fsvc.tenants || []).map((t) => t.tenant)),
         TENANT: customer,
-        NEXT_PUBLIC_FILES_URL: `https://${bucketId}.s3.us-east-1.amazonaws.com/uploads`,
+        FILES_URL: pulumi.interpolate`https://${bucketId}.s3.us-east-1.amazonaws.com/uploads`,
+        PROJECT_NAME: capitalizedName,
+        BASE_URL: baseUrl
     };
-
-    // Frontend-specific overrides
-    if (fsvc.tenants && fsvc.tenants.length > 0) {
-        env.NEXT_PUBLIC_BASE_URL = `https://${fsvc.tenants[0].subdomain}/`;
-    }
-
-    if (fsvc.name === "valornet-backoffice-frontend") {
-        env.VITE_API_BASE_URL = `https://${environment === "staging" ? "stg" : "api"}.${customer}.valornetvets.com/backoffice/v1`;
-    }
-
-    
 
     const imageRepoUrl = fsvc.imageRepo
 

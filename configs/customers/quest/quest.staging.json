@@ -10,9 +10,14 @@
   ],
   "overrides": {
     "http": {
-      "books-service": {
-        "imageTag": ""
-      }
+        "books-service": {
+            "imageTag": "stg-v1.1.0"
+        }
+    },
+    "frontend": {
+        "admin": {
+            "imageTag": "stg-imagefixes"
+        }
     }
   }
 }
